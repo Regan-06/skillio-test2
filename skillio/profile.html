@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Profile – Skillio</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+  <style>
+    @keyframes flipLogo {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(180deg); }
+      100% { transform: rotateY(360deg); }
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #c9f2f5;
+      padding: 40px;
+      color: #0f2027;
+    }
+
+    .logo-flip {
+      animation: flipLogo 2s infinite linear;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      height: 100px;
+      cursor: pointer;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,188,212,0.3);
+    }
+
+    h2 {
+      text-align: center;
+      color: #00bcd4;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      background: #00bcd4;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0097a7;
+    }
+
+    #preview {
+      display: block;
+      margin: 20px auto 0;
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #00bcd4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .readonly {
+      border: none;
+      background: none;
+      color: #333;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 20px; }
+      .container { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="main.html">
+    <img src="skillio logo.png" alt="Skillio Logo" class="logo-flip" />
+  </a>
+
+  <div class="container">
+    <h2>Your Skillio Profile</h2>
+    <form id="profileForm">
+      <div id="profileFields"></div>
+      <button id="editButton" type="button" style="display:none">Edit Profile</button>
+      <button id="saveButton" type="submit">Save Profile</button>
+    </form>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
+      authDomain: "skillio-b2f44.firebaseapp.com",
+      projectId: "skillio-b2f44",
+      storageBucket: "skillio-b2f44.appspot.com",
+      messagingSenderId: "883002535621",
+      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+      auth.onAuthStateChanged(async user => {
+        if (user) {
+          userId = user.uid;
+          const doc = await db.collection("users").doc(userId).get();
+          if (doc.exists) {
+            currentData = doc.data();
+            toggleMode(false);
+            renderFields(currentData);
+          } else {
+            toggleMode(true);
+            renderFields();
+          }
+        } else {
+          alert("You must be logged in");
+          window.location.href = "auth.html";
+        }
+      });
+    });
+
+    const fieldMap = [
+      { id: "name", label: "Name" },
+      { id: "description", label: "Description", type: "textarea" },
+      { id: "location", label: "Location" },
+      { id: "skillOffered", label: "Skill Offered" },
+      { id: "skillWanted", label: "Skill Wanted" },
+      { id: "profilePic", label: "Profile Picture URL" },
+      { id: "isPaid", label: "Offer paid sessions", type: "checkbox" },
+      { id: "rate", label: "Hourly Rate", type: "number" },
+      { id: "isWorkshop", label: "Host workshops", type: "checkbox" },
+      { id: "workshopTitle", label: "Workshop Title" },
+      { id: "workshopPrice", label: "Price per attendee", type: "number" }
+    ];
+
+    let isEditMode = true;
+    let currentData = {};
+    let userId = "";
+
+    function renderFields(data = {}) {
+      const container = document.getElementById("profileFields");
+      container.innerHTML = '';
+
+      const previewImg = document.createElement("img");
+      previewImg.id = "preview";
+      previewImg.src = data.profilePic || "";
+      previewImg.style.display = data.profilePic ? "block" : "none";
+      container.appendChild(previewImg);
+
+      fieldMap.forEach(field => {
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        const input = field.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
+
+        input.id = field.id;
+        input.name = field.id;
+
+        if (field.type === "checkbox") {
+          input.type = "checkbox";
+          input.checked = !!data[field.id];
+          if (!isEditMode) input.disabled = true;
+        } else {
+          input.type = field.type || "text";
+          input.value = data[field.id] || "";
+          if (!isEditMode) {
+            input.classList.add("readonly");
+            input.readOnly = true;
+          }
+        }
+
+        container.appendChild(label);
+        container.appendChild(input);
+      });
+    }
+
+    function toggleMode(edit) {
+      isEditMode = edit;
+      document.getElementById("saveButton").style.display = edit ? "block" : "none";
+      document.getElementById("editButton").style.display = edit ? "none" : "block";
+    }
+
+    document.getElementById("editButton").addEventListener("click", () => {
+      toggleMode(true);
+      renderFields(currentData);
+    });
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {};
+
+      fieldMap.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (field.type === "checkbox") {
+          data[field.id] = input.checked;
+        } else {
+          data[field.id] = input.value;
+        }
+      });
+
+      data.userId = userId;
+
+      await db.collection("users").doc(userId).set(data);
+      alert("Profile saved");
+      currentData = data;
+      toggleMode(false);
+      renderFields(data);
+    });
+  </script>
+</body>
+</html>
+
+
+
+

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skillio Boost Store</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #c9f2f5;
+      color: #0f2027;
+      margin: 0;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .skillio-logo {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      height: 100px;
+      cursor: pointer;
+      animation: flipLogo 1.5s infinite ease-in-out;
+    }
+
+    .view-cart-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #00bcd4;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 188, 212, 0.3);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .view-cart-button:hover {
+      background-color: #0097a7;
+      transform: scale(1.05);
+    }
+
+    @keyframes flipLogo {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(180deg); }
+      100% { transform: rotateY(360deg); }
+    }
+
+    h1 {
+      color: #00bcd4;
+      font-size: 2.5rem;
+      margin-top: 140px;
+      margin-bottom: 10px;
+    }
+
+    p.subtext {
+      max-width: 700px;
+      margin: 0 auto 40px;
+      font-size: 1.1rem;
+      color: #333;
+    }
+
+    .store-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .deal-card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 12px 30px rgba(0, 188, 212, 0.3);
+      border: 2px solid #00bcd4;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .deal-card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 16px 40px rgba(0, 188, 212, 0.5);
+    }
+
+    .deal-title {
+      font-size: 1.4rem;
+      color: #007e8a;
+      margin-bottom: 10px;
+    }
+
+    .deal-time {
+      font-size: 1.2rem;
+      margin: 10px 0;
+      color: #00bcd4;
+    }
+
+    .deal-price {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      color: #444;
+    }
+
+    button.buy-button {
+      padding: 12px 24px;
+      background: #00bcd4;
+      border: none;
+      color: white;
+      border-radius: 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 188, 212, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    button.buy-button:hover {
+      background: #0097a7;
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0, 188, 212, 0.6);
+    }
+
+    @media (max-width: 600px) {
+      .skillio-logo {
+        position: static;
+        display: block;
+        margin: 0 auto 20px;
+        height: 80px;
+      }
+
+      .view-cart-button {
+        position: static;
+        display: block;
+        margin: 10px auto 20px;
+        font-size: 0.95rem;
+        padding: 10px 20px;
+      }
+
+      h1 {
+        font-size: 2rem;
+        margin-top: 20px;
+      }
+
+      .deal-title {
+        font-size: 1.2rem;
+      }
+
+      .deal-time {
+        font-size: 1rem;
+      }
+
+      .deal-price {
+        font-size: 1rem;
+      }
+
+      .store-container {
+        grid-template-columns: 1fr;
+        padding: 0 10px;
+      }
+
+      button.buy-button {
+        font-size: 0.95rem;
+        padding: 10px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="main.html">
+    <img src="skillio logo.png" alt="Skillio Logo" class="skillio-logo" />
+  </a>
+
+  <button class="view-cart-button" onclick="viewCart()">View Cart</button>
+
+  <h1>Skillio Boost Store</h1>
+  <p class="subtext">Boost your profile to reach more users and get noticed for the skills, services, or workshops you're offering.</p>
+
+  <div class="store-container">
+    <div class="deal-card">
+      <div class="deal-title">Boost - 3 Days</div>
+      <div class="deal-time">Feature your profile sitewide for 72 hours</div>
+      <div class="deal-price">$4.99</div>
+      <button class="buy-button" onclick="addToCart('3-Day Boost', '3 Days Feature', 4.99)">Add to Cart</button>
+    </div>
+
+    <div class="deal-card">
+      <div class="deal-title">Boost - 1 Week</div>
+      <div class="deal-time">Top placement in searches and suggestions</div>
+      <div class="deal-price">$9.99</div>
+      <button class="buy-button" onclick="addToCart('1-Week Boost', '7 Days Feature', 9.99)">Add to Cart</button>
+    </div>
+
+    <div class="deal-card">
+      <div class="deal-title">Boost - 1 Month</div>
+      <div class="deal-time">Stay visible across Skillio for a full month</div>
+      <div class="deal-price">$19.99</div>
+      <button class="buy-button" onclick="addToCart('1-Month Boost', '30 Days Feature', 19.99)">Add to Cart</button>
+    </div>
+  </div>
+
+  <script>
+    function addToCart(title, time, price) {
+      let cart = JSON.parse(localStorage.getItem('skillioCart')) || [];
+      cart.push({ title, time, price });
+      localStorage.setItem('skillioCart', JSON.stringify(cart));
+      alert(`${title} added to your cart!`);
+    }
+
+    function viewCart() {
+      const cart = JSON.parse(localStorage.getItem('skillioCart')) || [];
+      if (cart.length === 0) {
+        alert("Your cart is empty.");
+      } else {
+        let message = "Your Cart:\n";
+        cart.forEach((item, i) => {
+          message += `${i + 1}. ${item.title} - ${item.time} - $${item.price.toFixed(2)}\n`;
+        });
+        alert(message);
+      }
+    }
+  </script>
+</body>
+</html>
