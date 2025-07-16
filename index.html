@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkillSwap – Trade Skills, Not Money</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #c9f2f5;
+      color: #222;
+    }
+
+    header {
+      text-align: center;
+      padding: 10px 20px;
+    }
+
+    header h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      font-size: 2rem;
+      font-weight: bold;
+      color: white;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 40px 20px;
+      background-color: #c9f2f5;
+      gap: 20px;
+    }
+
+    .feature {
+      background: #a6e7f0;
+      padding: 20px;
+      border-radius: 12px;
+      width: calc(40% - 20px);
+      max-width: 320px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .feature img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 10px;
+    }
+
+    .feature h3 {
+      color: white;
+      font-weight: bold;
+      text-decoration: underline;
+      margin-bottom: 6px;
+      font-size: 1rem;
+    }
+
+    .feature p {
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .cta {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .cta a {
+      background-color: #00e5ff;
+      color: white;
+      padding: 15px 30px;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 8px;
+      display: inline-block;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease-in-out;
+    }
+
+    .cta a::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: left 0.3s ease;
+    }
+
+    .cta a:hover {
+      background-color: #00bcd4;
+      transform: scale(1.1) rotate(1deg);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+    }
+
+    .cta a:hover::after {
+      left: 0;
+    }
+
+    .mission-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      background: #c9f2f5;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .mission-section img {
+      max-width: 300px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .mission-text {
+      max-width: 500px;
+    }
+
+    .mission-text h2 {
+      color: #00bcd4;
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+
+    .mission-text p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #0f2027;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    .social-block {
+      margin-top: 20px;
+    }
+
+    .social-block h3 {
+      color: #00e5ff;
+      margin-bottom: 10px;
+    }
+
+    .social-icons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    .social-icons a img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .logo-flip {
+      width: 220px;
+      margin-bottom: 20px;
+      animation: flipLogo 1.5s infinite ease-in-out;
+    }
+
+    @keyframes flipLogo {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(180deg); }
+      100% { transform: rotateY(360deg); }
+    }
+
+    .slogan {
+      display: inline-block;
+    }
+
+    .grow {
+      display: inline-block;
+      animation: growText 1s ease-in-out forwards;
+      animation-delay: 2.5s;
+      opacity: 0;
+    }
+
+    @keyframes growText {
+      0% { transform: scale(1); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .type {
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 3px solid white;
+      animation-fill-mode: forwards;
+      display: inline-block;
+      animation: typing 2.5s steps(30, end);
+    }
+
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 30ch }
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 2rem;
+      }
+
+      header p {
+        font-size: 1.2rem;
+        padding: 0 10px;
+      }
+
+      .feature {
+        width: calc(50% - 20px);
+        margin: 10px;
+      }
+
+      .mission-section {
+        flex-direction: column;
+        padding: 30px 15px;
+      }
+
+      .mission-text {
+        text-align: center;
+      }
+
+      .cta a {
+        font-size: 1rem;
+        padding: 12px 24px;
+      }
+
+      .logo-flip {
+        width: 160px;
+      }
+
+      .feature img {
+        width: 42px;
+        height: 42px;
+      }
+
+      .feature h3 {
+        font-size: 0.95rem;
+      }
+
+      .feature p {
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .feature {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="skillio logo.png" alt="Skillio Logo" class="logo-flip" />
+    <p><span class="slogan type">Give a skill Gain a skill</span> <span class="grow">Grow together!</span></p>
+  </header>
+
+  <section class="features">
+    <div class="feature">
+      <img src="skill_icon_1.png" alt="Time Wallet Icon" />
+      <h3>Time Wallet</h3>
+      <p>Earn time credits by helping others. Spend them on skills you need.</p>
+    </div>
+    <div class="feature">
+      <img src="skill_icon_3.png" alt="Smart Matching Icon" />
+      <h3>Smart Matching</h3>
+      <p>We connect you with people who have the skills you're looking for.</p>
+    </div>
+    <div class="feature">
+      <img src="skill_icon_2.png" alt="Skill Profiles Icon" />
+      <h3>Skill Profiles</h3>
+      <p>Showcase your talents with ratings, bios, and past contributions.</p>
+    </div>
+    <div class="feature">
+      <img src="skill_icon_4.png" alt="Community Icon" />
+      <h3>Community</h3>
+      <p>Join a growing network of learners, helpers, and creators.</p>
+    </div>
+  </section>
+
+  <div class="cta">
+    <a href="main.html">Start Swapping Skills</a>
+  </div>
+
+  <section class="mission-section">
+    <img src="mission-image.jpg" alt="Mission Visual">
+    <div class="mission-text">
+      <h2>Our Mission</h2>
+      <p>Skillio exists to create a fair, inclusive economy where everyone’s time and talents are valued. Whether you’re teaching guitar or learning to cook, our goal is to connect you with people in a vibrant, skill-sharing community that thrives on giving and gaining, not spending.</p>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2025 SkillSwap. All rights reserved.
+    <div class="social-block">
+      <h3>Follow the Skillio Socials!</h3>
+      <div class="social-icons">
+        <a href="https://instagram.com" target="_blank"><img src="instagram.png" alt="Instagram"></a>
+        <a href="https://facebook.com" target="_blank"><img src="facebook.png" alt="Facebook"></a>
+        <a href="https://tiktok.com" target="_blank"><img src="tiktok.png" alt="TikTok"></a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
+
+
+
