@@ -52,7 +52,7 @@
       font-weight: bold;
     }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 10px;
       border-radius: 8px;
@@ -149,12 +149,16 @@
       });
     });
 
+    const skillOptions = ["Web Design", "Cooking", "Tutoring", "Fitness", "Music", "Handyman", "Babysitting", "Other"];
+
     const fieldMap = [
       { id: "name", label: "Name" },
       { id: "description", label: "Description", type: "textarea" },
       { id: "location", label: "Location" },
-      { id: "skillOffered", label: "Skill Offered" },
-      { id: "skillWanted", label: "Skill Wanted" },
+      { id: "skillOffered", label: "Skill Offered", type: "dropdown" },
+      { id: "skillWanted", label: "Skill Wanted", type: "dropdown" },
+      { id: "customSkillOffered", label: "Custom Offered Skill" },
+      { id: "customSkillWanted", label: "Custom Wanted Skill" },
       { id: "profilePic", label: "Profile Picture URL" },
       { id: "isPaid", label: "Offer paid sessions", type: "checkbox" },
       { id: "rate", label: "Hourly Rate", type: "number" },
@@ -180,26 +184,41 @@
       fieldMap.forEach(field => {
         const label = document.createElement("label");
         label.textContent = field.label;
-        const input = field.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
+        let input;
+
+        if (field.type === "dropdown") {
+          input = document.createElement("select");
+          skillOptions.forEach(opt => {
+            const option = document.createElement("option");
+            option.value = opt;
+            option.textContent = opt;
+            if (data[field.id] === opt) option.selected = true;
+            input.appendChild(option);
+          });
+          input.addEventListener("change", () => {
+            document.getElementById("custom" + field.id.charAt(0).toUpperCase() + field.id.slice(1)).style.display = input.value === "Other" ? "block" : "none";
+          });
+        } else if (field.type === "textarea") {
+          input = document.createElement("textarea");
+          input.value = data[field.id] || "";
+        } else {
+          input = document.createElement("input");
+          input.type = field.type || "text";
+          if (field.type === "checkbox") input.checked = !!data[field.id];
+          else input.value = data[field.id] || "";
+        }
 
         input.id = field.id;
         input.name = field.id;
-
-        if (field.type === "checkbox") {
-          input.type = "checkbox";
-          input.checked = !!data[field.id];
-          if (!isEditMode) input.disabled = true;
-        } else {
-          input.type = field.type || "text";
-          input.value = data[field.id] || "";
-          if (!isEditMode) {
-            input.classList.add("readonly");
-            input.readOnly = true;
-          }
+        if (!isEditMode) {
+          if (field.type !== "checkbox") input.readOnly = true;
+          input.classList.add("readonly");
         }
 
         container.appendChild(label);
         container.appendChild(input);
+
+        if (field.id.startsWith("custom")) input.style.display = (data[field.id.replace("custom", "").toLowerCase()] === "Other") ? "block" : "none";
       });
     }
 
