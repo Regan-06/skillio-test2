@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Skillio Calendar</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -139,43 +142,6 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
 
-    #appointmentForm {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 6px 16px rgba(0, 188, 212, 0.2);
-      max-width: 600px;
-      margin: 20px auto;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    #appointmentForm label {
-      font-size: 1rem;
-    }
-
-    #appointmentForm input {
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-
-    #appointmentForm button {
-      padding: 8px 16px;
-      background-color: #00bcd4;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    #appointmentForm button:hover {
-      background-color: #007e8a;
-    }
-
     @media (max-width: 600px) {
       body {
         padding: 20px;
@@ -203,16 +169,6 @@
         width: 100%;
       }
 
-      #appointmentForm {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      #appointmentForm input,
-      #appointmentForm button {
-        width: 100%;
-      }
-
       .calendar table {
         min-width: 100%;
         font-size: 1rem;
@@ -221,12 +177,12 @@
   </style>
 </head>
 <body>
-  <a href="skill swap landing.html">
+  <a href="main.html">
     <img src="skillio logo.png" alt="Skillio Logo" class="logo" />
   </a>
 
   <h1>Skillio Appointment Calendar</h1>
-  <p class="sub-note">📅 Use this calendar to schedule and manage your upcoming workshops, paid sessions, and skill swaps.</p>
+  <p class="sub-note">📅 All your booked swaps, sessions and events will show up here automatically.</p>
 
   <div class="calendar-controls">
     <button onclick="changeMonth(-1)">&lt; Prev</button>
@@ -251,28 +207,26 @@
     </table>
   </div>
 
-  <button onclick="showAppointmentForm()" style="margin-top: 20px; padding: 10px 20px; background-color: #00bcd4; color: white; border: none; border-radius: 6px; cursor: pointer; display: block; margin-left: auto; margin-right: auto;">
-    Add Appointment
-  </button>
-
-  <div id="appointmentForm" style="display: none;">
-    <label>Date: <input type="date" id="appointmentDate" /></label>
-    <label>Description: <input type="text" id="appointmentDesc" placeholder="e.g. Workshop, 1hr lesson, swap" /></label>
-    <button onclick="addAppointment()">Save</button>
-  </div>
-
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
+      authDomain: "skillio-b2f44.firebaseapp.com",
+      projectId: "skillio-b2f44",
+      storageBucket: "skillio-b2f44.appspot.com",
+      messagingSenderId: "883002535621",
+      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
     const calendarBody = document.getElementById('calendar-body');
     const monthYear = document.getElementById('monthYear');
     const today = new Date();
     let currentMonth = today.getMonth();
     let currentYear = today.getFullYear();
-
-    const appointments = {
-      '2025-07-05': { desc: 'Coaching Session' },
-      '2025-07-12': { desc: 'Web Dev Help' },
-      '2025-07-20': { desc: 'Photoshoot' }
-    };
+    let appointments = {};
 
     function generateCalendar(month, year) {
       calendarBody.innerHTML = '';
@@ -321,20 +275,27 @@
       generateCalendar(currentMonth, currentYear);
     }
 
-    function showAppointmentForm() {
-      document.getElementById("appointmentForm").style.display = "flex";
-    }
+    auth.onAuthStateChanged(user => {
+      if (!user) return (window.location.href = 'auth.html');
+      loadAppointments(user.uid);
+    });
 
-    function addAppointment() {
-      const date = document.getElementById("appointmentDate").value;
-      const desc = document.getElementById("appointmentDesc").value || 'Appointment';
-      if (date) {
-        appointments[date] = { desc };
-        generateCalendar(currentMonth, currentYear);
-        document.getElementById("appointmentForm").style.display = "none";
-        document.getElementById("appointmentDate").value = '';
-        document.getElementById("appointmentDesc").value = '';
-      }
+    function loadAppointments(userId) {
+      db.collection("swaps").where("from", "==", userId).get().then(fromSnap => {
+        db.collection("swaps").where("to", "==", userId).get().then(toSnap => {
+          const allSwaps = [...fromSnap.docs, ...toSnap.docs];
+          appointments = {};
+          allSwaps.forEach(doc => {
+            const data = doc.data();
+            if (data.date) {
+              appointments[data.date] = {
+                desc: `Swap ${data.time ? `(${data.time})` : ''}`
+              };
+            }
+          });
+          generateCalendar(currentMonth, currentYear);
+        });
+      });
     }
 
     generateCalendar(currentMonth, currentYear);
