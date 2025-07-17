@@ -4,25 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Profile – Skillio</title>
-
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-
   <style>
-    @keyframes flipLogo {
-      0% { transform: rotateY(0deg); }
-      50% { transform: rotateY(180deg); }
-      100% { transform: rotateY(360deg); }
-    }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #c9f2f5;
       padding: 40px;
       color: #0f2027;
     }
-
     .logo-flip {
       animation: flipLogo 2s infinite linear;
       position: absolute;
@@ -31,7 +22,11 @@
       height: 100px;
       cursor: pointer;
     }
-
+    @keyframes flipLogo {
+      0% { transform: rotateY(0deg); }
+      50% { transform: rotateY(180deg); }
+      100% { transform: rotateY(360deg); }
+    }
     .container {
       max-width: 600px;
       margin: auto;
@@ -40,18 +35,15 @@
       border-radius: 16px;
       box-shadow: 0 8px 20px rgba(0,188,212,0.3);
     }
-
     h2 {
       text-align: center;
       color: #00bcd4;
     }
-
     label {
       display: block;
       margin-top: 15px;
       font-weight: bold;
     }
-
     input, textarea, select {
       width: 100%;
       padding: 10px;
@@ -61,7 +53,6 @@
       box-sizing: border-box;
       font-size: 1rem;
     }
-
     button {
       margin-top: 20px;
       padding: 12px;
@@ -72,11 +63,9 @@
       border-radius: 8px;
       cursor: pointer;
     }
-
     button:hover {
       background: #0097a7;
     }
-
     #preview {
       display: block;
       margin: 20px auto 0;
@@ -87,13 +76,11 @@
       border: 3px solid #00bcd4;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
     .readonly {
       border: none;
       background: none;
       color: #333;
     }
-
     @media (max-width: 600px) {
       body { padding: 20px; }
       .container { padding: 20px; }
@@ -101,17 +88,13 @@
   </style>
 </head>
 <body>
-
-  <a href="main.html">
-    <img src="skillio logo.png" alt="Skillio Logo" class="logo-flip" />
-  </a>
-
+  <a href="main.html"><img src="skillio logo.png" alt="Skillio Logo" class="logo-flip" /></a>
   <div class="container">
-    <h2>Your Skillio Profile</h2>
+    <h2>Skillio Profile</h2>
     <form id="profileForm">
       <div id="profileFields"></div>
       <button id="editButton" type="button" style="display:none">Edit Profile</button>
-      <button id="saveButton" type="submit">Save Profile</button>
+      <button id="saveButton" type="submit" style="display:none">Save Profile</button>
     </form>
   </div>
 
@@ -129,28 +112,12 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-      auth.onAuthStateChanged(async user => {
-        if (user) {
-          userId = user.uid;
-          const doc = await db.collection("users").doc(userId).get();
-          if (doc.exists) {
-            currentData = doc.data();
-            toggleMode(false);
-            renderFields(currentData);
-          } else {
-            toggleMode(true);
-            renderFields();
-          }
-        } else {
-          alert("You must be logged in");
-          window.location.href = "auth.html";
-        }
-      });
-    });
+    let isEditMode = true;
+    let currentUserId = "";
+    let viewedUserId = "";
+    let currentData = {};
 
     const skillOptions = ["Web Design", "Cooking", "Tutoring", "Fitness", "Music", "Handyman", "Babysitting", "Other"];
-
     const fieldMap = [
       { id: "name", label: "Name" },
       { id: "description", label: "Description", type: "textarea" },
@@ -167,9 +134,16 @@
       { id: "workshopPrice", label: "Price per attendee", type: "number" }
     ];
 
-    let isEditMode = true;
-    let currentData = {};
-    let userId = "";
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    function toggleMode(edit) {
+      isEditMode = edit;
+      document.getElementById("saveButton").style.display = edit ? "block" : "none";
+      document.getElementById("editButton").style.display = !edit && currentUserId === viewedUserId ? "block" : "none";
+    }
 
     function renderFields(data = {}) {
       const container = document.getElementById("profileFields");
@@ -212,20 +186,17 @@
         input.name = field.id;
         if (!isEditMode) {
           if (field.type !== "checkbox") input.readOnly = true;
+          input.disabled = true;
           input.classList.add("readonly");
         }
 
         container.appendChild(label);
         container.appendChild(input);
 
-        if (field.id.startsWith("custom")) input.style.display = (data[field.id.replace("custom", "").toLowerCase()] === "Other") ? "block" : "none";
+        if (field.id.startsWith("custom")) {
+          input.style.display = (data[field.id.replace("custom", "").toLowerCase()] === "Other") ? "block" : "none";
+        }
       });
-    }
-
-    function toggleMode(edit) {
-      isEditMode = edit;
-      document.getElementById("saveButton").style.display = edit ? "block" : "none";
-      document.getElementById("editButton").style.display = edit ? "none" : "block";
     }
 
     document.getElementById("editButton").addEventListener("click", () => {
@@ -236,23 +207,43 @@
     document.getElementById("profileForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = {};
-
       fieldMap.forEach(field => {
         const input = document.getElementById(field.id);
-        if (field.type === "checkbox") {
-          data[field.id] = input.checked;
-        } else {
-          data[field.id] = input.value;
-        }
+        data[field.id] = field.type === "checkbox" ? input.checked : input.value;
       });
 
-      data.userId = userId;
-
-      await db.collection("users").doc(userId).set(data);
+      data.userId = currentUserId;
+      await db.collection("users").doc(currentUserId).set(data);
       alert("Profile saved");
       currentData = data;
       toggleMode(false);
       renderFields(data);
+    });
+
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+      auth.onAuthStateChanged(async user => {
+        if (!user) {
+          alert("You must be logged in");
+          return window.location.href = "auth.html";
+        }
+        currentUserId = user.uid;
+        const paramUid = getQueryParam("user");
+        viewedUserId = paramUid || currentUserId;
+        isEditMode = (currentUserId === viewedUserId);
+        toggleMode(isEditMode);
+
+        const doc = await db.collection("users").doc(viewedUserId).get();
+        if (doc.exists) {
+          currentData = doc.data();
+          renderFields(currentData);
+        } else {
+          if (!paramUid) renderFields(); // allow new user to fill their profile
+          else {
+            alert("User profile not found");
+            window.location.href = "main.html";
+          }
+        }
+      });
     });
   </script>
 </body>
