@@ -8,48 +8,38 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #c9f2f5;
-      color: #0f2027;
-      padding: 30px;
-    }
-    .top-nav { background-color: #00bcd4; padding: 12px 20px; border-radius: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3); }
-    .top-nav img { height: 100px; }
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #c9f2f5; color: #0f2027; padding: 30px; }
+    nav { background-color: #00bcd4; padding: 12px 20px; border-radius: 12px; margin-bottom: 30px;
+          display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3); }
+    nav img { height: 100px; }
     .top-nav-links { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-    .top-nav a { color: white; text-decoration: none; font-weight: bold; font-size: 1rem; transition: color 0.2s; }
-    .top-nav a:hover { color: #e0f7fa; }
+    nav a { color: white; text-decoration: none; font-weight: bold; font-size: 1rem; transition: color 0.2s; }
+    nav a:hover { color: #e0f7fa; }
     h1 { text-align: center; color: #00bcd4; margin-bottom: 10px; }
-    .note { text-align: center; margin-bottom: 30px; font-size: 1rem; color: #555; background: #fff3cd; padding: 10px; border-radius: 10px; border: 1px solid #ffeeba; }
-    .conversations { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0, 188, 212, 0.2); }
-    .conversation { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 15px; }
+    .note { text-align: center; margin-bottom: 30px; font-size: 1rem; color: #555;
+            background: #fff3cd; padding: 10px; border-radius: 10px; border: 1px solid #ffeeba; }
+    .conversations { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px;
+                     box-shadow: 0 8px 20px rgba(0, 188, 212, 0.2); }
+    .conversation { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex;
+                    align-items: center; gap: 15px; }
     .conversation:hover { background-color: #f1fafd; }
     .profile-pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #00bcd4; }
     .messages { padding-left: 55px; display: none; animation: fadeIn 0.3s ease-in-out; }
     .message-line { padding: 6px 0; }
     .reply-box { display: flex; margin-top: 10px; flex-wrap: wrap; gap: 10px; }
     .reply-box input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; min-width: 0; }
-    .reply-box button { padding: 8px 16px; background-color: #00bcd4; border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+    .reply-box button { padding: 8px 16px; background-color: #00bcd4; border: none; color: white; border-radius: 8px;
+                        cursor: pointer; font-size: 1rem; }
     .reply-box button:hover { background-color: #0097a7; }
+    .swap-button { margin-top: 10px; background: #4caf50; color: #fff; border: none; padding: 10px;
+                   border-radius: 8px; cursor: pointer; }
+    .swap-button:hover { background: #388e3c; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @media (max-width: 600px) {
-      body { padding: 20px; }
-      .top-nav { flex-direction: column; align-items: center; text-align: center; }
-      .top-nav img { height: 80px; }
-      .top-nav-links { flex-direction: column; gap: 10px; }
-      h1 { font-size: 1.6rem; }
-      .reply-box { flex-direction: column; align-items: stretch; }
-      .reply-box button { width: 100%; }
-      .messages { padding-left: 0; margin-top: 10px; }
-    }
   </style>
 </head>
 <body>
-  <nav class="top-nav">
-    <a href="main.html">
-      <img src="skillio logo.png" alt="Skillio Logo" />
-    </a>
+  <nav>
+    <a href="main.html"><img src="skillio logo.png" alt="Skillio Logo" /></a>
     <div class="top-nav-links">
       <a href="profile.html">Profile</a>
       <a href="messages.html">Messages</a>
@@ -70,14 +60,12 @@
       messagingSenderId: "883002535621",
       appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
 
     auth.onAuthStateChanged(async user => {
       if (!user) return (window.location.href = 'auth.html');
-
       const currentUserId = user.uid;
       const currentUserName = user.displayName || "You";
       const conversationList = document.getElementById("conversationList");
@@ -85,17 +73,13 @@
       const sent = await db.collection("messages").where("from", "==", currentUserId).get();
       const received = await db.collection("messages").where("to", "==", currentUserId).get();
       const userIds = new Set();
-
       sent.docs.forEach(doc => userIds.add(doc.data().to));
       received.docs.forEach(doc => userIds.add(doc.data().from));
-
       if (userIds.size === 0) {
         conversationList.innerHTML = "<p>No conversations yet.</p>";
         return;
       }
-
       conversationList.innerHTML = "";
-
       userIds.forEach(async userId => {
         const userDoc = await db.collection("users").doc(userId).get();
         const userData = userDoc.data();
@@ -105,10 +89,8 @@
         const convo = document.createElement("div");
         convo.className = "conversation";
         convo.innerHTML = `<img src="${profilePic}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
-
         const msgDiv = document.createElement("div");
         msgDiv.className = "messages";
-
         convo.addEventListener("click", async () => {
           if (msgDiv.style.display === "block") {
             msgDiv.style.display = "none";
@@ -116,10 +98,10 @@
           } else {
             msgDiv.innerHTML = "<p>Loading chat...</p>";
             msgDiv.style.display = "block";
-
             const allMsgs = await db.collection("messages").orderBy("timestamp").get();
-            const msgs = allMsgs.docs.map(doc => doc.data()).filter(m => (m.from === currentUserId && m.to === userId) || (m.from === userId && m.to === currentUserId));
-
+            const msgs = allMsgs.docs.map(doc => doc.data()).filter(m =>
+              (m.from === currentUserId && m.to === userId) || (m.from === userId && m.to === currentUserId)
+            );
             msgDiv.innerHTML = "";
             msgs.forEach(m => {
               const sender = m.from === currentUserId ? "You" : m.fromName;
@@ -151,12 +133,32 @@
                 input.value = "";
               });
             };
-
             form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
             msgDiv.appendChild(form);
+
+            const swapButton = document.createElement("button");
+            swapButton.className = "swap-button";
+            swapButton.textContent = "Set Up Swap";
+            swapButton.onclick = async () => {
+              const date = prompt("Swap date (YYYY-MM-DD):");
+              const start = prompt("Start time (e.g. 2:00 PM):");
+              const end = prompt("End time (e.g. 3:00 PM):");
+              const desc = prompt("Swap description:");
+              if (!date || !start || !end) return alert("Cancelled");
+              await db.collection("swaps").add({
+                from: currentUserId,
+                to: userId,
+                date,
+                startTime: start,
+                endTime: end,
+                description: desc || "Swap session",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              alert("Swap created and synced to your calendar.");
+            };
+            msgDiv.appendChild(swapButton);
           }
         });
-
         conversationList.appendChild(convo);
         conversationList.appendChild(msgDiv);
       });
@@ -164,6 +166,7 @@
   </script>
 </body>
 </html>
+
 
 
 
