@@ -81,6 +81,22 @@
       background: none;
       color: #333;
     }
+    .feedback-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #eee;
+    }
+    .stars {
+      color: #fbc02d;
+      font-size: 1.2rem;
+    }
+    .feedback-item {
+      background: #f7f9fa;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+    }
     @media (max-width: 600px) {
       body { padding: 20px; }
       .container { padding: 20px; }
@@ -96,6 +112,12 @@
       <button id="editButton" type="button" style="display:none">Edit Profile</button>
       <button id="saveButton" type="submit" style="display:none">Save Profile</button>
     </form>
+
+    <div id="feedbackContainer" class="feedback-section" style="display: none;">
+      <h3>⭐ Feedback & Ratings</h3>
+      <div id="ratingAverage"></div>
+      <div id="feedbackList"></div>
+    </div>
   </div>
 
   <script>
@@ -107,7 +129,6 @@
       messagingSenderId: "883002535621",
       appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
@@ -220,6 +241,30 @@
       renderFields(data);
     });
 
+    function renderFeedback(feedback) {
+      const list = document.getElementById("feedbackList");
+      const avgEl = document.getElementById("ratingAverage");
+      const container = document.getElementById("feedbackContainer");
+
+      if (!feedback.length) return;
+
+      container.style.display = "block";
+      list.innerHTML = "";
+
+      const total = feedback.reduce((sum, fb) => sum + (fb.rating || 0), 0);
+      const avg = (total / feedback.length).toFixed(1);
+      const starsHTML = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+      avgEl.innerHTML = `<strong>Average Rating:</strong> <span class="stars">${starsHTML}</span> (${avg}/5)`;
+
+      feedback.forEach(fb => {
+        const div = document.createElement("div");
+        div.className = "feedback-item";
+        const stars = '★'.repeat(fb.rating || 0) + '☆'.repeat(5 - (fb.rating || 0));
+        div.innerHTML = `<div class="stars">${stars}</div><div>${fb.comment || ''}</div>`;
+        list.appendChild(div);
+      });
+    }
+
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
       auth.onAuthStateChanged(async user => {
         if (!user) {
@@ -236,18 +281,17 @@
         if (doc.exists) {
           currentData = doc.data();
           renderFields(currentData);
-        } else {
-          if (!paramUid) renderFields(); // allow new user to fill their profile
-          else {
-            alert("User profile not found");
-            window.location.href = "main.html";
-          }
         }
+
+        const feedbackSnap = await db.collection("swap_feedback").where("userId", "==", viewedUserId).get();
+        const feedbackData = feedbackSnap.docs.map(doc => doc.data());
+        renderFeedback(feedbackData);
       });
     });
   </script>
 </body>
 </html>
+
 
 
 
