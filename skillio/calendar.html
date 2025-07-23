@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +97,8 @@
       padding: 14px;
       border: 1px solid #e0f7fa;
       font-size: 1.1rem;
+      position: relative;
+      vertical-align: top;
     }
 
     .calendar th {
@@ -103,12 +106,6 @@
       color: white;
       text-transform: uppercase;
       font-weight: 600;
-    }
-
-    .calendar td:hover {
-      background-color: #e0f7fa;
-      cursor: pointer;
-      transition: background-color 0.2s;
     }
 
     .today {
@@ -119,188 +116,223 @@
     }
 
     .appointment {
-      background-color: #ffb74d !important;
+      background-color: #ffb74d;
       border-radius: 12px;
       font-weight: bold;
-      position: relative;
     }
 
-    .appointment:hover::after {
-      content: attr(data-desc);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #333;
-      color: #fff;
-      padding: 8px 12px;
+    .rating-box {
+      margin-top: 8px;
+    }
+
+    .rating-box input[type="number"],
+    .rating-box textarea {
+      width: 100%;
+      margin-top: 5px;
       border-radius: 6px;
-      white-space: nowrap;
-      font-size: 0.95rem;
-      margin-bottom: 10px;
-      z-index: 10;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      padding: 5px;
+      border: 1px solid #ccc;
     }
 
-    @media (max-width: 600px) {
-      body {
-        padding: 20px;
-      }
+    .rating-box button {
+      margin-top: 5px;
+      background-color: #00bcd4;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-      .logo {
-        position: relative;
-        top: 0;
-        left: 0;
-        display: block;
-        margin: 0 auto 20px;
-        height: 80px;
-      }
-
-      h1 {
-        font-size: 1.6rem;
-      }
-
-      .calendar-controls {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .calendar-controls button {
-        width: 100%;
-      }
-
-      .calendar table {
-        min-width: 100%;
-        font-size: 1rem;
-      }
+    .rating-box button:hover {
+      background-color: #007e8a;
     }
   </style>
 </head>
 <body>
-  <a href="main.html">
-    <img src="skillio logo.png" alt="Skillio Logo" class="logo" />
-  </a>
-
+  <a href="main.html"><img src="skillio logo.png" class="logo" /></a>
   <h1>Skillio Appointment Calendar</h1>
   <p class="sub-note">📅 All your booked swaps, sessions and events will show up here automatically.</p>
-
   <div class="calendar-controls">
     <button onclick="changeMonth(-1)">&lt; Prev</button>
     <h2 id="monthYear"></h2>
     <button onclick="changeMonth(1)">Next &gt;</button>
   </div>
-
   <div class="calendar">
     <table>
       <thead>
         <tr>
-          <th>Sun</th>
-          <th>Mon</th>
-          <th>Tue</th>
-          <th>Wed</th>
-          <th>Thu</th>
-          <th>Fri</th>
-          <th>Sat</th>
+          <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
         </tr>
       </thead>
       <tbody id="calendar-body"></tbody>
     </table>
   </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
-      authDomain: "skillio-b2f44.firebaseapp.com",
-      projectId: "skillio-b2f44",
-      storageBucket: "skillio-b2f44.appspot.com",
-      messagingSenderId: "883002535621",
-      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
+    authDomain: "skillio-b2f44.firebaseapp.com",
+    projectId: "skillio-b2f44",
+    storageBucket: "skillio-b2f44.appspot.com",
+    messagingSenderId: "883002535621",
+    appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
 
-    const calendarBody = document.getElementById('calendar-body');
-    const monthYear = document.getElementById('monthYear');
-    const today = new Date();
-    let currentMonth = today.getMonth();
-    let currentYear = today.getFullYear();
-    let appointments = {};
+  const calendarBody = document.getElementById('calendar-body');
+  const monthYear = document.getElementById('monthYear');
+  const today = new Date();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+  let appointments = {};
+  let userId = null;
 
-    function generateCalendar(month, year) {
-      calendarBody.innerHTML = '';
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+  function generateCalendar(month, year) {
+    calendarBody.innerHTML = '';
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      monthYear.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
+    monthYear.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
 
-      let html = '<tr>';
-      for (let i = 0; i < firstDay; i++) {
-        html += '<td></td>';
-      }
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        let classes = '';
-        let tooltip = '';
-        if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-          classes += 'today ';
-        }
-        if (appointments[fullDate]) {
-          classes += 'appointment';
-          tooltip = ` data-desc="${appointments[fullDate].desc}"`;
-        }
-
-        html += `<td class="${classes.trim()}"${tooltip}>${day}</td>`;
-
-        if ((day + firstDay) % 7 === 0) {
-          html += '</tr><tr>';
-        }
-      }
-
-      html += '</tr>';
-      calendarBody.innerHTML = html;
+    let html = '<tr>';
+    for (let i = 0; i < firstDay; i++) {
+      html += '<td></td>';
     }
 
-    function changeMonth(offset) {
-      currentMonth += offset;
-      if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-      } else if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isTodayOrPast = new Date(fullDate) <= today;
+      let content = `${day}`;
+      let classes = '';
+      let cellHTML = '';
+
+      if (appointments[fullDate]) {
+        classes += 'appointment';
+        const app = appointments[fullDate];
+
+        // Check if already confirmed
+        if (app.confirmed) {
+          content += `<br/><small>Confirmed</small>`;
+        } else if (isTodayOrPast) {
+          // Only show confirm UI if not confirmed and swap is today or past
+          content += `
+            <div>
+              <label>⭐</label><br/>
+              <select id="rating-${fullDate}">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select><br/>
+              <textarea id="feedback-${fullDate}" placeholder="Feedback..." rows="2"></textarea><br/>
+              <button onclick="submitFeedback('${fullDate}', '${app.swapId}', false)">✅ Confirm</button>
+              <button onclick="submitFeedback('${fullDate}', '${app.swapId}', true)">❌ Incomplete</button>
+            </div>
+          `;
+        }
       }
-      generateCalendar(currentMonth, currentYear);
+
+      if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+        classes += ' today';
+      }
+
+      cellHTML += `<td class="${classes}">${content}</td>`;
+      html += cellHTML;
+
+      if ((day + firstDay) % 7 === 0) html += '</tr><tr>';
     }
 
-    auth.onAuthStateChanged(user => {
-      if (!user) return (window.location.href = 'auth.html');
-      loadAppointments(user.uid);
-    });
+    html += '</tr>';
+    calendarBody.innerHTML = html;
+  }
 
-    function loadAppointments(userId) {
-      db.collection("swaps").where("from", "==", userId).get().then(fromSnap => {
-        db.collection("swaps").where("to", "==", userId).get().then(toSnap => {
-          const allSwaps = [...fromSnap.docs, ...toSnap.docs];
-          appointments = {};
-          allSwaps.forEach(doc => {
-            const data = doc.data();
-            if (data.date) {
-              appointments[data.date] = {
-                desc: `Swap ${data.time ? `(${data.time})` : ''}`
-              };
-            }
-          });
-          generateCalendar(currentMonth, currentYear);
-        });
-      });
+  function changeMonth(offset) {
+    currentMonth += offset;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    } else if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
     }
-
     generateCalendar(currentMonth, currentYear);
+  }
+
+  function submitFeedback(date, swapId, isIncomplete) {
+    const rating = parseInt(document.getElementById(`rating-${date}`).value);
+    const comment = document.getElementById(`feedback-${date}`).value.trim();
+
+    db.collection("swap_feedback").doc(swapId).set({
+      rating,
+      comment,
+      incomplete: isIncomplete,
+      swapId,
+      date,
+      userId,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      appointments[date].confirmed = true;
+      generateCalendar(currentMonth, currentYear);
+      alert("Feedback submitted!");
+    }).catch(err => {
+      console.error("Feedback error:", err);
+      alert("Error submitting feedback.");
+    });
+  }
+
+  function loadAppointments(uid) {
+    userId = uid;
+    const swapsRef = db.collection("swaps");
+    const feedbackRef = db.collection("swap_feedback");
+    const allSwaps = [];
+
+    Promise.all([
+      swapsRef.where("from", "==", uid).get(),
+      swapsRef.where("to", "==", uid).get()
+    ]).then(([fromSnap, toSnap]) => {
+      const allDocs = [...fromSnap.docs, ...toSnap.docs];
+      const feedbackChecks = [];
+
+      allDocs.forEach(doc => {
+        const data = doc.data();
+        const swapId = doc.id;
+        const date = data.date;
+
+        if (!date) return;
+
+        appointments[date] = {
+          swapId,
+          confirmed: false
+        };
+
+        feedbackChecks.push(
+          feedbackRef.doc(swapId).get().then(fbDoc => {
+            if (fbDoc.exists) {
+              appointments[date].confirmed = true;
+            }
+          })
+        );
+      });
+
+      Promise.all(feedbackChecks).then(() => {
+        generateCalendar(currentMonth, currentYear);
+      });
+    });
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (!user) return location.href = "auth.html";
+    loadAppointments(user.uid);
+  });
+
+  generateCalendar(currentMonth, currentYear);
+</script>
   </script>
 </body>
 </html>
-
 
