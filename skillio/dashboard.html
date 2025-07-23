@@ -179,45 +179,83 @@
   const db = firebase.firestore();
   const auth = firebase.auth();
 
-  auth.onAuthStateChanged(user => {
+  function getTodayISO() {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  }
+
+  auth.onAuthStateChanged(async user => {
     if (!user) {
       window.location.href = 'auth.html';
       return;
     }
 
     const userId = user.uid;
+    // Get user level for display
     db.collection('users').doc(userId).get().then(doc => {
-      if (!doc.exists) return;
-
       const data = doc.data();
-      document.getElementById('swapsCompleted').textContent = data.swapsCompleted ?? 0;
-      document.getElementById('appointments').textContent = data.appointments ?? 0;
       document.getElementById('accountLevel').textContent = 'Level: ' + (data.level ?? 0);
-
-      const badgeList = document.getElementById('badgeList');
-      badgeList.innerHTML = '';
-
-      const badges = [];
-      if (data.swapsCompleted >= 1) {
-        badges.push({ name: "Bronze Badge", img: "badge_bronze_1.png", alt: "Bronze Badge – 1 Swap" });
-      }
-      if (data.swapsCompleted >= 10) {
-        badges.push({ name: "Silver Badge", img: "badge_silver_10.png", alt: "Silver Badge – 10 Swaps" });
-      }
-      if (data.swapsCompleted >= 50) {
-        badges.push({ name: "Gold Badge", img: "badge_gold_50.png", alt: "Gold Badge – 50 Swaps" });
-      }
-
-      if (badges.length === 0) {
-        badgeList.innerHTML = '<li>No badges earned yet.</li>';
-      } else {
-        for (const badge of badges) {
-          const li = document.createElement('li');
-          li.innerHTML = `<img src="${badge.img}" alt="${badge.alt}" class="badge-image"><span style="margin-left: 10px;">${badge.name}</span>`;
-          badgeList.appendChild(li);
-        }
-      }
     });
+
+    // 1. Count upcoming appointments
+    const todayISO = getTodayISO();
+    let appointmentsCount = 0;
+    try {
+      const [fromSnap, toSnap] = await Promise.all([
+        db.collection('swaps').where('from', '==', userId).get(),
+        db.collection('swaps').where('to', '==', userId).get()
+      ]);
+      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
+      const futureSwaps = allSwaps.filter(doc => {
+        const data = doc.data();
+        // Accept both string and Date for 'date'
+        let swapDate = data.date;
+        if (swapDate instanceof Date) {
+          swapDate = swapDate.toISOString().split('T')[0];
+        }
+        return swapDate && swapDate >= todayISO;
+      });
+      appointmentsCount = futureSwaps.length;
+    } catch (e) {
+      appointmentsCount = 0;
+    }
+    document.getElementById('appointments').textContent = appointmentsCount;
+
+    // 2. Count swaps completed (feedback, not incomplete)
+    let swapsCompleted = 0;
+    try {
+      const feedbackSnap = await db.collection('swap_feedback')
+        .where('userId', '==', userId)
+        .where('incomplete', '==', false)
+        .get();
+      swapsCompleted = feedbackSnap.size;
+    } catch (e) {
+      swapsCompleted = 0;
+    }
+    document.getElementById('swapsCompleted').textContent = swapsCompleted;
+
+    // 3. Badges
+    const badgeList = document.getElementById('badgeList');
+    badgeList.innerHTML = '';
+    const badges = [];
+    if (swapsCompleted >= 1) {
+      badges.push({ name: "Bronze Badge", img: "badge_bronze_1.png", alt: "Bronze Badge – 1 Swap" });
+    }
+    if (swapsCompleted >= 10) {
+      badges.push({ name: "Silver Badge", img: "badge_silver_10.png", alt: "Silver Badge – 10 Swaps" });
+    }
+    if (swapsCompleted >= 50) {
+      badges.push({ name: "Gold Badge", img: "badge_gold_50.png", alt: "Gold Badge – 50 Swaps" });
+    }
+    if (badges.length === 0) {
+      badgeList.innerHTML = '<li>No badges earned yet.</li>';
+    } else {
+      for (const badge of badges) {
+        const li = document.createElement('li');
+        li.innerHTML = `<img src="${badge.img}" alt="${badge.alt}" class="badge-image"><span style="margin-left: 10px;">${badge.name}</span>`;
+        badgeList.appendChild(li);
+      }
+    }
   });
 </script>
 </body>
