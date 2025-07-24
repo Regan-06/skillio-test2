@@ -101,32 +101,93 @@
 
   <div class="feed" id="feed"></div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
   <script>
-    function createPost() {
-      const text = document.getElementById('postText').value;
-      const imageInput = document.getElementById('postImage');
-      const feed = document.getElementById('feed');
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
+      authDomain: "skillio-b2f44.firebaseapp.com",
+      projectId: "skillio-b2f44",
+      storageBucket: "skillio-b2f44.appspot.com",
+      messagingSenderId: "883002535621",
+      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const storage = firebase.storage();
 
-      const post = document.createElement('div');
-      post.className = 'post';
-      post.innerHTML = `<p>${text}</p>`;
-
-      if (imageInput.files && imageInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          post.appendChild(img);
-          feed.prepend(post);
-        };
-        reader.readAsDataURL(imageInput.files[0]);
-      } else {
-        feed.prepend(post);
-      }
-
-      document.getElementById('postText').value = '';
-      imageInput.value = '';
+    // Helper to format timestamp
+    function formatDate(ts) {
+      if (!ts) return '';
+      const date = ts.toDate ? ts.toDate() : new Date(ts);
+      return date.toLocaleString();
     }
+
+    // Fetch and display posts
+    async function loadFeed() {
+      const feed = document.getElementById('feed');
+      feed.innerHTML = 'Loading...';
+      const postsSnap = await db.collection('posts').orderBy('timestamp', 'desc').get();
+      if (postsSnap.empty) {
+        feed.innerHTML = '<p>No posts yet.</p>';
+        return;
+      }
+      feed.innerHTML = '';
+      postsSnap.forEach(doc => {
+        const data = doc.data();
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        postDiv.innerHTML = `
+          <div style="font-weight:bold;">${data.userName || 'Anonymous'}</div>
+          <div style="font-size:0.9em;color:#888;">${formatDate(data.timestamp)}</div>
+          <p>${data.text || ''}</p>
+          ${data.imageUrl ? `<img src="${data.imageUrl}" style="max-width:100%;margin:10px 0;">` : ''}
+          <button class="like-btn">Like</button>
+        `;
+        feed.appendChild(postDiv);
+      });
+    }
+
+    // Post creation
+    async function createPost() {
+      const postText = document.getElementById('postText').value.trim();
+      const postImage = document.getElementById('postImage').files[0];
+      const feed = document.getElementById('feed');
+      feed.innerHTML = 'Posting...';
+      const user = auth.currentUser;
+      if (!user) {
+        alert('You must be signed in to post.');
+        return;
+      }
+      let imageUrl = '';
+      if (postImage) {
+        const storageRef = storage.ref(`post_images/${user.uid}_${Date.now()}_${postImage.name}`);
+        await storageRef.put(postImage);
+        imageUrl = await storageRef.getDownloadURL();
+      }
+      await db.collection('posts').add({
+        userId: user.uid,
+        userName: user.displayName || user.email || 'Anonymous',
+        text: postText,
+        imageUrl,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById('postText').value = '';
+      document.getElementById('postImage').value = '';
+      loadFeed();
+    }
+
+    // Auth and initial load
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'auth.html';
+        return;
+      }
+      loadFeed();
+    });
   </script>
 </body>
 </html>
