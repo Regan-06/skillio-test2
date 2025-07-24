@@ -79,11 +79,15 @@
       if (targetUserId && targetUserId !== currentUserId) {
         // Open direct conversation with target user
         conversationList.innerHTML = '<p>Loading conversation...</p>';
-        // Fetch target user's name
+        // Fetch target user's name and profilePic
         let userName = 'Unknown User';
+        let userProfilePic = '';
         try {
           const userDoc = await db.collection('users').doc(targetUserId).get();
-          if (userDoc.exists) userName = userDoc.data().name || 'Unknown User';
+          if (userDoc.exists) {
+            userName = userDoc.data().name || 'Unknown User';
+            userProfilePic = userDoc.data().profilePic || '';
+          }
         } catch (e) {}
         // Fetch all messages between currentUserId and targetUserId
         const allMsgsSnap = await db.collection("messages").orderBy("timestamp").get();
@@ -93,17 +97,25 @@
         // Render conversation
         let convoDiv = document.createElement('div');
         convoDiv.className = 'conversation';
-        convoDiv.innerHTML = `<strong>Conversation with ${userName}</strong>`;
+        convoDiv.innerHTML = `<img src="${userProfilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><strong>Conversation with ${userName}</strong>`;
         let msgDiv = document.createElement('div');
         msgDiv.className = 'messages';
         msgDiv.style.display = 'block';
-        msgs.forEach(m => {
+        for (const m of msgs) {
           const sender = m.from === currentUserId ? "You" : m.fromName;
+          let senderPic = '';
+          if (m.from === currentUserId) {
+            // Get current user's profilePic
+            const userDoc = await db.collection('users').doc(currentUserId).get();
+            senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
+          } else {
+            senderPic = userProfilePic;
+          }
           const line = document.createElement("div");
           line.className = "message-line";
-          line.innerHTML = `<strong>${sender}:</strong> ${m.message}`;
+          line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>${sender}:</strong> ${m.message}`;
           msgDiv.appendChild(line);
-        });
+        }
         // Reply form
         const form = document.createElement("form");
         form.className = "reply-box";
@@ -120,11 +132,16 @@
             message: text,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           }).then(() => {
-            const line = document.createElement("div");
-            line.className = "message-line";
-            line.innerHTML = `<strong>You:</strong> ${text}`;
-            msgDiv.appendChild(line);
-            input.value = "";
+            // Add new message with current user's profilePic
+            const userDocPromise = db.collection('users').doc(currentUserId).get();
+            userDocPromise.then(userDoc => {
+              const senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
+              const line = document.createElement("div");
+              line.className = "message-line";
+              line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>You:</strong> ${text}`;
+              msgDiv.appendChild(line);
+              input.value = "";
+            });
           });
         };
         form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
@@ -146,15 +163,18 @@
         conversationList.innerHTML = "";
         userIds.forEach(async userId => {
           let userName = "Unknown User";
+          let profilePic = '';
           try {
             const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists) userName = userDoc.data().name || 'Unknown User';
+            if (userDoc.exists) {
+              userName = userDoc.data().name || 'Unknown User';
+              profilePic = userDoc.data().profilePic || '';
+            }
           } catch (e) {}
           const convo = document.createElement("div");
           convo.className = "conversation";
-          convo.innerHTML = `<strong>${userName}</strong>`;
+          convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
           convo.onclick = async () => {
-            // ... existing code to open conversation ...
             msgDiv.innerHTML = "<p>Loading chat...</p>";
             msgDiv.style.display = "block";
             const allMsgs = await db.collection("messages").orderBy("timestamp").get();
@@ -162,13 +182,20 @@
               (m.from === currentUserId && m.to === userId) || (m.from === userId && m.to === currentUserId)
             );
             msgDiv.innerHTML = "";
-            msgs.forEach(m => {
+            for (const m of msgs) {
               const sender = m.from === currentUserId ? "You" : m.fromName;
+              let senderPic = '';
+              if (m.from === currentUserId) {
+                const userDoc = await db.collection('users').doc(currentUserId).get();
+                senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
+              } else {
+                senderPic = profilePic;
+              }
               const line = document.createElement("div");
               line.className = "message-line";
-              line.innerHTML = `<strong>${sender}:</strong> ${m.message}`;
+              line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>${sender}:</strong> ${m.message}`;
               msgDiv.appendChild(line);
-            });
+            }
             const form = document.createElement("form");
             form.className = "reply-box";
             form.onsubmit = (e) => {
@@ -184,11 +211,15 @@
                 message: text,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
               }).then(() => {
-                const line = document.createElement("div");
-                line.className = "message-line";
-                line.innerHTML = `<strong>You:</strong> ${text}`;
-                msgDiv.appendChild(line);
-                input.value = "";
+                const userDocPromise = db.collection('users').doc(currentUserId).get();
+                userDocPromise.then(userDoc => {
+                  const senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
+                  const line = document.createElement("div");
+                  line.className = "message-line";
+                  line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>You:</strong> ${text}`;
+                  msgDiv.appendChild(line);
+                  input.value = "";
+                });
               });
             };
             form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
