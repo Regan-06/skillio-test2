@@ -107,6 +107,11 @@
   <a href="main.html"><img src="skillio logo.png" alt="Skillio Logo" class="logo-flip" /></a>
   <div class="container">
     <h2>Skillio Profile</h2>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+      <button id="followBtn">Follow</button>
+      <button id="messageBtn">Message</button>
+      <span id="followerCount"></span>
+    </div>
     <form id="profileForm">
       <div id="profileFields"></div>
       <button id="editButton" type="button" style="display:none">Edit Profile</button>
@@ -288,6 +293,42 @@
         renderFeedback(feedbackData);
       });
     });
+
+    // Follow/Unfollow and Message logic
+    let followBtn = document.getElementById('followBtn');
+    let messageBtn = document.getElementById('messageBtn');
+    let followerCount = document.getElementById('followerCount');
+    let profileUid = viewedUserId;
+    let currentUid = currentUserId;
+    if (profileUid === currentUid) {
+      followBtn.style.display = 'none';
+      messageBtn.style.display = 'none';
+      followerCount.style.display = 'none';
+    } else {
+      // Real-time follower count
+      db.collection('users').doc(profileUid).collection('followers').onSnapshot(snap => {
+        followerCount.textContent = `Followers: ${snap.size}`;
+      });
+      // Update follow button state
+      async function updateFollowBtn() {
+        const doc = await db.collection('users').doc(profileUid).collection('followers').doc(currentUid).get();
+        followBtn.textContent = doc.exists ? 'Unfollow' : 'Follow';
+      }
+      updateFollowBtn();
+      followBtn.onclick = async () => {
+        const ref = db.collection('users').doc(profileUid).collection('followers').doc(currentUid);
+        const doc = await ref.get();
+        if (doc.exists) {
+          await ref.delete();
+        } else {
+          await ref.set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+        updateFollowBtn();
+      };
+      messageBtn.onclick = () => {
+        window.location.href = `messages.html?user=${profileUid}`;
+      };
+    }
   </script>
 </body>
 </html>
