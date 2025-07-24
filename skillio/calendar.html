@@ -195,6 +195,7 @@
   <a href="main.html"><img src="skillio logo.png" class="logo" /></a>
   <h1>Skillio Appointment Calendar</h1>
   <p class="sub-note">📅 All your booked swaps, sessions and events will show up here automatically.</p>
+  <div id="appointmentsSummary" style="margin-bottom:20px;"></div>
   <div class="calendar-controls">
     <button onclick="changeMonth(-1)">&lt; Prev</button>
     <h2 id="monthYear"></h2>
@@ -367,6 +368,55 @@
     });
   }
 
+  // Appointments summary (above calendar)
+  const appointmentsSummary = document.getElementById('appointmentsSummary');
+  appointmentsSummary.innerHTML = 'Loading...';
+  auth.onAuthStateChanged(async user => {
+    if (!user) return location.href = "auth.html";
+    const userId = user.uid;
+    const todayISO = new Date().toISOString().split('T')[0];
+    Promise.all([
+      db.collection('swaps').where('from', '==', userId).get(),
+      db.collection('swaps').where('to', '==', userId).get()
+    ]).then(async ([fromSnap, toSnap]) => {
+      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
+      const futureSwaps = allSwaps.filter(doc => {
+        const data = doc.data();
+        let swapDate = data.date;
+        if (swapDate instanceof Date) swapDate = swapDate.toISOString().split('T')[0];
+        return swapDate && swapDate >= todayISO;
+      });
+      const userIdsToFetch = futureSwaps.map(doc => {
+        const data = doc.data();
+        return data.from === userId ? data.to : data.from;
+      });
+      const uniqueUserIds = [...new Set(userIdsToFetch)];
+      const userProfiles = {};
+      await Promise.all(uniqueUserIds.map(async uid => {
+        const userDoc = await db.collection('users').doc(uid).get();
+        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
+      }));
+      appointmentsSummary.innerHTML = '';
+      if (futureSwaps.length === 0) {
+        appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
+      } else {
+        const list = document.createElement('ul');
+        futureSwaps.forEach(doc => {
+          const data = doc.data();
+          const otherUserId = data.from === userId ? data.to : data.from;
+          const otherUserName = userProfiles[otherUserId] || 'Unknown User';
+          const desc = data.description || 'No description';
+          const date = data.date || 'No date';
+          const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
+          const li = document.createElement('li');
+          li.textContent = `${date} ${time} — With ${otherUserName}: ${desc}`;
+          list.appendChild(li);
+        });
+        appointmentsSummary.appendChild(list);
+      }
+    });
+  });
+
   auth.onAuthStateChanged(user => {
     if (!user) return location.href = "auth.html";
     loadAppointments(user.uid);
@@ -377,3 +427,4 @@
   </script>
 </body>
 </html>
+
