@@ -151,6 +151,7 @@
   <div class="card">
     <h2>Appointments</h2>
     <div class="value" id="appointments">Loading...</div>
+    <ul id="appointmentsList"></ul>
   </div>
   <div class="card">
     <h2>Suggested Matches</h2>
@@ -163,6 +164,7 @@
     <ul id="badgeList">Loading badges...</ul>
   </div>
 </div>
+<div id="appointmentsSummary" style="margin-top:30px;"></div>
 
 <!-- Firebase + Dashboard Logic -->
 <script>
@@ -197,18 +199,18 @@
       document.getElementById('accountLevel').textContent = 'Level: ' + (data.level ?? 0);
     });
 
-    // 1. Count upcoming appointments
+    // 1. Count upcoming appointments and display details
     const todayISO = getTodayISO();
     let appointmentsCount = 0;
+    let futureSwaps = [];
     try {
       const [fromSnap, toSnap] = await Promise.all([
         db.collection('swaps').where('from', '==', userId).get(),
         db.collection('swaps').where('to', '==', userId).get()
       ]);
       const allSwaps = [...fromSnap.docs, ...toSnap.docs];
-      const futureSwaps = allSwaps.filter(doc => {
+      futureSwaps = allSwaps.filter(doc => {
         const data = doc.data();
-        // Accept both string and Date for 'date'
         let swapDate = data.date;
         if (swapDate instanceof Date) {
           swapDate = swapDate.toISOString().split('T')[0];
@@ -220,6 +222,38 @@
       appointmentsCount = 0;
     }
     document.getElementById('appointments').textContent = appointmentsCount;
+
+    // Display appointment details
+    const appointmentsList = document.getElementById('appointmentsList');
+    appointmentsList.innerHTML = 'Loading...';
+    if (futureSwaps.length === 0) {
+      appointmentsList.innerHTML = '<li>No upcoming appointments.</li>';
+    } else {
+      // Get all unique other user IDs
+      const userIdsToFetch = futureSwaps.map(doc => {
+        const data = doc.data();
+        return data.from === userId ? data.to : data.from;
+      });
+      const uniqueUserIds = [...new Set(userIdsToFetch)];
+      const userProfiles = {};
+      await Promise.all(uniqueUserIds.map(async uid => {
+        const userDoc = await db.collection('users').doc(uid).get();
+        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
+      }));
+      appointmentsList.innerHTML = '';
+      futureSwaps.forEach(doc => {
+        const data = doc.data();
+        const otherUserId = data.from === userId ? data.to : data.from;
+        const otherUserName = userProfiles[otherUserId] || 'Unknown User';
+        const desc = data.description || 'No description';
+        const date = data.date || 'No date';
+        const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
+        const status = data.status ? `Status: ${data.status}` : '';
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>Date:</strong> ${date} <strong>Time:</strong> ${time}<br><strong>With:</strong> ${otherUserName}<br><strong>Description:</strong> ${desc}<br><strong>${status}</strong>`;
+        appointmentsList.appendChild(li);
+      });
+    }
 
     // 2. Count swaps completed (feedback, not incomplete)
     let swapsCompleted = 0;
@@ -256,11 +290,55 @@
         badgeList.appendChild(li);
       }
     }
+
+    // Appointments summary (below dashboard)
+    const appointmentsSummary = document.getElementById('appointmentsSummary');
+    appointmentsSummary.innerHTML = 'Loading...';
+    const todayISO = getTodayISO();
+    Promise.all([
+      db.collection('swaps').where('from', '==', userId).get(),
+      db.collection('swaps').where('to', '==', userId).get()
+    ]).then(async ([fromSnap, toSnap]) => {
+      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
+      const futureSwaps = allSwaps.filter(doc => {
+        const data = doc.data();
+        let swapDate = data.date;
+        if (swapDate instanceof Date) swapDate = swapDate.toISOString().split('T')[0];
+        return swapDate && swapDate >= todayISO;
+      });
+      const userIdsToFetch = futureSwaps.map(doc => {
+        const data = doc.data();
+        return data.from === userId ? data.to : data.from;
+      });
+      const uniqueUserIds = [...new Set(userIdsToFetch)];
+      const userProfiles = {};
+      await Promise.all(uniqueUserIds.map(async uid => {
+        const userDoc = await db.collection('users').doc(uid).get();
+        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
+      }));
+      appointmentsSummary.innerHTML = '';
+      if (futureSwaps.length === 0) {
+        appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
+      } else {
+        const list = document.createElement('ul');
+        futureSwaps.forEach(doc => {
+          const data = doc.data();
+          const otherUserId = data.from === userId ? data.to : data.from;
+          const otherUserName = userProfiles[otherUserId] || 'Unknown User';
+          const desc = data.description || 'No description';
+          const date = data.date || 'No date';
+          const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
+          const li = document.createElement('li');
+          li.textContent = `${date} ${time} — With ${otherUserName}: ${desc}`;
+          list.appendChild(li);
+        });
+        appointmentsSummary.appendChild(list);
+      }
+    });
   });
 </script>
 </body>
 </html>
-
 
 
 
