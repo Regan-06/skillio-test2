@@ -294,7 +294,7 @@
     // Appointments summary (below dashboard)
     const appointmentsSummary = document.getElementById('appointmentsSummary');
     appointmentsSummary.innerHTML = 'Loading...';
-    const todayISO = getTodayISO();
+    // Use the already declared todayISO
     Promise.all([
       db.collection('swaps').where('from', '==', userId).get(),
       db.collection('swaps').where('to', '==', userId).get()
