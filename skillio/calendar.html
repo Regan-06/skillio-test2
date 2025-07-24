@@ -147,6 +147,48 @@
     .rating-box button:hover {
       background-color: #007e8a;
     }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .calendar {
+        padding: 10px;
+        font-size: 0.95em;
+        min-width: unset;
+        overflow-x: auto;
+      }
+      .calendar table {
+        min-width: 400px;
+        font-size: 0.9em;
+      }
+      .calendar th, .calendar td {
+        padding: 6px;
+        font-size: 0.9em;
+      }
+      .calendar-controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .calendar-controls button {
+        width: 100%;
+        font-size: 1em;
+        padding: 8px 0;
+      }
+      .logo {
+        height: 60px;
+        top: 10px;
+        left: 10px;
+      }
+      h1 {
+        font-size: 1.2rem;
+        margin-bottom: 6px;
+      }
+      .sub-note {
+        font-size: 0.95em;
+        padding: 6px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -335,4 +377,3 @@
   </script>
 </body>
 </html>
-
