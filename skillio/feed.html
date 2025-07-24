@@ -141,8 +141,13 @@
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
-          <div style="font-weight:bold;">${data.userName || 'Anonymous'}</div>
-          <div style="font-size:0.9em;color:#888;">${formatDate(data.timestamp)}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${data.profilePic ? `<img src="${data.profilePic}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : '<div style="width:40px;height:40px;border-radius:50%;background:#ccc;"></div>'}
+            <div>
+              <div style="font-weight:bold;">${data.userName || 'Anonymous'}</div>
+              <div style="font-size:0.9em;color:#888;">${formatDate(data.timestamp)}</div>
+            </div>
+          </div>
           <p>${data.text || ''}</p>
           ${data.imageUrl ? `<img src="${data.imageUrl}" style="max-width:100%;margin:10px 0;">` : ''}
           <button class="like-btn">Like</button>
@@ -162,6 +167,17 @@
         alert('You must be signed in to post.');
         return;
       }
+      // Fetch user profile info from users collection
+      let userName = user.displayName || user.email || 'Anonymous';
+      let profilePic = '';
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData.name) userName = userData.name;
+          if (userData.profilePic) profilePic = userData.profilePic;
+        }
+      } catch (e) {}
       let imageUrl = '';
       if (postImage) {
         const storageRef = storage.ref(`post_images/${user.uid}_${Date.now()}_${postImage.name}`);
@@ -170,7 +186,8 @@
       }
       await db.collection('posts').add({
         userId: user.uid,
-        userName: user.displayName || user.email || 'Anonymous',
+        userName,
+        profilePic,
         text: postText,
         imageUrl,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
