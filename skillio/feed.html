@@ -94,8 +94,9 @@
 
   <div class="post-box">
     <textarea id="postText" placeholder="Share your skill, service, or upcoming workshop..."></textarea>
-    <input type="file" id="postImage" accept="image/*">
+    <input type="file" id="postImage" accept="image/*" onchange="previewImage(event)">
     <br>
+    <img id="imagePreview" style="max-width:200px;display:none;margin:10px 0;" />
     <button onclick="createPost()">Post</button>
   </div>
 
@@ -126,34 +127,21 @@
       return date.toLocaleString();
     }
 
-    // Fetch and display posts
-    async function loadFeed() {
-      const feed = document.getElementById('feed');
-      feed.innerHTML = 'Loading...';
-      const postsSnap = await db.collection('posts').orderBy('timestamp', 'desc').get();
-      if (postsSnap.empty) {
-        feed.innerHTML = '<p>No posts yet.</p>';
-        return;
+    // Image preview before posting
+    function previewImage(event) {
+      const file = event.target.files[0];
+      const preview = document.getElementById('imagePreview');
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.src = '';
+        preview.style.display = 'none';
       }
-      feed.innerHTML = '';
-      postsSnap.forEach(doc => {
-        const data = doc.data();
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
-        postDiv.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;">
-            ${data.profilePic ? `<img src="${data.profilePic}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : '<div style="width:40px;height:40px;border-radius:50%;background:#ccc;"></div>'}
-            <div>
-              <div style="font-weight:bold;">${data.userName || 'Anonymous'}</div>
-              <div style="font-size:0.9em;color:#888;">${formatDate(data.timestamp)}</div>
-            </div>
-          </div>
-          <p>${data.text || ''}</p>
-          ${data.imageUrl ? `<img src="${data.imageUrl}" style="max-width:100%;margin:10px 0;">` : ''}
-          <button class="like-btn">Like</button>
-        `;
-        feed.appendChild(postDiv);
-      });
     }
 
     // Post creation
@@ -190,11 +178,127 @@
         profilePic,
         text: postText,
         imageUrl,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        likes: [],
+        comments: []
       });
       document.getElementById('postText').value = '';
       document.getElementById('postImage').value = '';
-      loadFeed();
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    // Add comment to a post
+    async function addComment(postId, commentText) {
+      const user = auth.currentUser;
+      if (!user) return alert('You must be signed in to comment.');
+      let userName = user.displayName || user.email || 'Anonymous';
+      let profilePic = '';
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData.name) userName = userData.name;
+          if (userData.profilePic) profilePic = userData.profilePic;
+        }
+      } catch (e) {}
+      const comment = {
+        userId: user.uid,
+        userName,
+        profilePic,
+        text: commentText,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await db.collection('posts').doc(postId).update({
+        comments: firebase.firestore.FieldValue.arrayUnion(comment)
+      });
+    }
+
+    // Like/unlike a post
+    async function toggleLike(postId, likes) {
+      const user = auth.currentUser;
+      if (!user) return alert('You must be signed in to like posts.');
+      const userId = user.uid;
+      const postRef = db.collection('posts').doc(postId);
+      if (likes.includes(userId)) {
+        await postRef.update({ likes: firebase.firestore.FieldValue.arrayRemove(userId) });
+      } else {
+        await postRef.update({ likes: firebase.firestore.FieldValue.arrayUnion(userId) });
+      }
+    }
+
+    // Delete a post
+    async function deletePost(postId, imageUrl) {
+      if (!confirm('Are you sure you want to delete this post?')) return;
+      await db.collection('posts').doc(postId).delete();
+      if (imageUrl) {
+        try {
+          const fileRef = storage.refFromURL(imageUrl);
+          await fileRef.delete();
+        } catch (e) {}
+      }
+    }
+
+    // Edit a post (simple text edit)
+    async function editPost(postId, oldText) {
+      const newText = prompt('Edit your post:', oldText);
+      if (newText !== null && newText.trim() !== '') {
+        await db.collection('posts').doc(postId).update({ text: newText.trim() });
+      }
+    }
+
+    // Real-time feed updates
+    function loadFeed() {
+      const feed = document.getElementById('feed');
+      feed.innerHTML = 'Loading...';
+      db.collection('posts').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+        feed.innerHTML = '';
+        if (snapshot.empty) {
+          feed.innerHTML = '<p>No posts yet.</p>';
+          return;
+        }
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const postId = doc.id;
+          const user = auth.currentUser;
+          const isOwner = user && user.uid === data.userId;
+          const hasLiked = user && data.likes && data.likes.includes(user.uid);
+          const postDiv = document.createElement('div');
+          postDiv.className = 'post';
+          postDiv.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;">
+              <a href="profile.html?user=${data.userId}">
+                ${data.profilePic ? `<img src="${data.profilePic}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : '<div style="width:40px;height:40px;border-radius:50%;background:#ccc;"></div>'}
+              </a>
+              <div>
+                <a href="profile.html?user=${data.userId}" style="font-weight:bold;text-decoration:none;color:inherit;">${data.userName || 'Anonymous'}</a>
+                <div style="font-size:0.9em;color:#888;">${formatDate(data.timestamp)}</div>
+              </div>
+              ${isOwner ? `<button onclick="editPost('${postId}', '${data.text.replace(/'/g, "\\'")}')">Edit</button> <button onclick="deletePost('${postId}', '${data.imageUrl || ''}')">Delete</button>` : ''}
+            </div>
+            <p>${data.text || ''}</p>
+            ${data.imageUrl ? `<img src="${data.imageUrl}" style="max-width:100%;margin:10px 0;">` : ''}
+            <button class="like-btn" onclick="toggleLike('${postId}', ${JSON.stringify(data.likes || [])})">${hasLiked ? 'Unlike' : 'Like'} (${(data.likes && data.likes.length) || 0})</button>
+            <div class="comments-section">
+              <div><strong>Comments:</strong></div>
+              ${(data.comments || []).map(c => `
+                <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+                  ${c.profilePic ? `<img src="${c.profilePic}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '<div style="width:24px;height:24px;border-radius:50%;background:#ccc;"></div>'}
+                  <span style="font-weight:bold;">${c.userName || 'Anonymous'}</span>
+                  <span style="font-size:0.85em;color:#888;">${formatDate(c.timestamp)}</span>
+                  <span style="margin-left:8px;">${c.text}</span>
+                </div>
+              `).join('')}
+              <form onsubmit="event.preventDefault(); addComment('${postId}', this.elements['comment'].value); this.reset();">
+                <input name="comment" type="text" placeholder="Add a comment..." required style="width:80%;">
+                <button type="submit">Comment</button>
+              </form>
+            </div>
+          `;
+          feed.appendChild(postDiv);
+        });
+      }, err => {
+        feed.innerHTML = `<p style='color:red;'>Error loading feed: ${err.message}</p>`;
+      });
     }
 
     // Auth and initial load
