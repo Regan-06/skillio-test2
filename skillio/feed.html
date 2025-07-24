@@ -180,14 +180,13 @@
         imageUrl,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         likes: [],
-        comments: []
       });
       document.getElementById('postText').value = '';
       document.getElementById('postImage').value = '';
       document.getElementById('imagePreview').style.display = 'none';
     }
 
-    // Add comment to a post
+    // Add comment to a post (now uses subcollection)
     async function addComment(postId, commentText) {
       const user = auth.currentUser;
       if (!user) return alert('You must be signed in to comment.');
@@ -208,9 +207,7 @@
         text: commentText,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       };
-      await db.collection('posts').doc(postId).update({
-        comments: firebase.firestore.FieldValue.arrayUnion(comment)
-      });
+      await db.collection('posts').doc(postId).collection('comments').add(comment);
     }
 
     // Like/unlike a post
@@ -246,7 +243,7 @@
       }
     }
 
-    // Real-time feed updates
+    // Real-time feed updates with real-time comments
     function loadFeed() {
       const feed = document.getElementById('feed');
       feed.innerHTML = 'Loading...';
@@ -278,16 +275,9 @@
             <p>${data.text || ''}</p>
             ${data.imageUrl ? `<img src="${data.imageUrl}" style="max-width:100%;margin:10px 0;">` : ''}
             <button class="like-btn" onclick="toggleLike('${postId}', ${JSON.stringify(data.likes || [])})">${hasLiked ? 'Unlike' : 'Like'} (${(data.likes && data.likes.length) || 0})</button>
-            <div class="comments-section">
+            <div class="comments-section" id="comments-${postId}">
               <div><strong>Comments:</strong></div>
-              ${(data.comments || []).map(c => `
-                <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                  ${c.profilePic ? `<img src="${c.profilePic}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '<div style="width:24px;height:24px;border-radius:50%;background:#ccc;"></div>'}
-                  <span style="font-weight:bold;">${c.userName || 'Anonymous'}</span>
-                  <span style="font-size:0.85em;color:#888;">${formatDate(c.timestamp)}</span>
-                  <span style="margin-left:8px;">${c.text}</span>
-                </div>
-              `).join('')}
+              <div class="comments-list"></div>
               <form onsubmit="event.preventDefault(); addComment('${postId}', this.elements['comment'].value); this.reset();">
                 <input name="comment" type="text" placeholder="Add a comment..." required style="width:80%;">
                 <button type="submit">Comment</button>
@@ -295,6 +285,24 @@
             </div>
           `;
           feed.appendChild(postDiv);
+
+          // Real-time comments for this post
+          const commentsList = postDiv.querySelector('.comments-list');
+          db.collection('posts').doc(postId).collection('comments').orderBy('timestamp').onSnapshot(commentsSnap => {
+            commentsList.innerHTML = '';
+            commentsSnap.forEach(cDoc => {
+              const c = cDoc.data();
+              const cDiv = document.createElement('div');
+              cDiv.style = 'display:flex;align-items:center;gap:8px;margin:4px 0;';
+              cDiv.innerHTML = `
+                ${c.profilePic ? `<img src="${c.profilePic}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : '<div style="width:24px;height:24px;border-radius:50%;background:#ccc;"></div>'}
+                <span style="font-weight:bold;">${c.userName || 'Anonymous'}</span>
+                <span style="font-size:0.85em;color:#888;">${formatDate(c.timestamp)}</span>
+                <span style="margin-left:8px;">${c.text}</span>
+              `;
+              commentsList.appendChild(cDiv);
+            });
+          });
         });
       }, err => {
         feed.innerHTML = `<p style='color:red;'>Error loading feed: ${err.message}</p>`;
