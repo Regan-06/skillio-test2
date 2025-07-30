@@ -745,14 +745,32 @@
         const messagesContainer = document.getElementById('messages');
         if (messagesContainer) {
           console.log('Looking for swap request to remove with swapId:', swapId);
+          console.log('Messages container found, total elements:', messagesContainer.children.length);
           
           // Method 1: Try to find by data-swap-id attribute (most reliable)
           const swapRequestElement = messagesContainer.querySelector(`[data-swap-id="${swapId}"]`);
+          console.log('Element found by data-swap-id:', swapRequestElement);
+          
           if (swapRequestElement) {
             console.log('Found swap request element by data-swap-id, removing...');
+            console.log('Element to remove:', swapRequestElement);
+            console.log('Element HTML:', swapRequestElement.outerHTML);
             swapRequestElement.remove();
             console.log('Swap request element removed successfully');
             alert('Swap request removed from display!'); // Test alert
+            
+            // Check if removal actually worked
+            setTimeout(() => {
+              const checkElement = messagesContainer.querySelector(`[data-swap-id="${swapId}"]`);
+              console.log('After removal, element still exists:', checkElement);
+              if (checkElement) {
+                console.log('Element was recreated or not removed properly');
+                alert('Element was recreated or not removed properly!');
+              } else {
+                console.log('Element successfully removed and not recreated');
+                alert('Element successfully removed and not recreated!');
+              }
+            }, 1000);
           } else {
             console.log('No element found with data-swap-id, trying alternative method...');
             
@@ -763,10 +781,12 @@
             let foundAndRemoved = false;
             swapRequestElements.forEach((element, index) => {
               console.log('Checking element', index, ':', element.innerHTML.substring(0, 100) + '...');
+              console.log('Element data-swap-id:', element.getAttribute('data-swap-id'));
               
               // Check if this element contains the swap request for this swapId
               if (element.innerHTML.includes(swapId)) {
                 console.log('Found swap request element to remove (contains swapId)');
+                console.log('Element to remove:', element);
                 element.remove(); // Remove the swap request from display
                 foundAndRemoved = true;
                 alert('Swap request removed by content search!'); // Test alert
