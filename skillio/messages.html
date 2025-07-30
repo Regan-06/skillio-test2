@@ -893,18 +893,19 @@
         const currentUserName = currentUserDoc.data()?.displayName || 'Unknown User';
         const targetUserName = targetUserDoc.data()?.displayName || 'Unknown User';
 
-        // Get messages between these users
-        const messagesQuery = db.collection("messages")
-          .where("from", "in", [currentUserId, targetUserId])
-          .where("to", "in", [currentUserId, targetUserId])
-          .orderBy("timestamp", "asc");
+        // Get all messages and filter client-side (Firestore doesn't support complex queries well)
+        const messagesSnapshot = await db.collection("messages")
+          .orderBy("timestamp", "asc")
+          .get();
 
-        messagesQuery.onSnapshot(async (snapshot) => {
-          const messages = [];
+        const messages = [];
+        for (const doc of messagesSnapshot.docs) {
+          const data = doc.data();
+          data.id = doc.id;
           
-          for (const doc of snapshot.docs) {
-            const data = doc.data();
-            data.id = doc.id;
+          // Filter for messages between these two users
+          if ((data.from === currentUserId && data.to === targetUserId) || 
+              (data.from === targetUserId && data.to === currentUserId)) {
             
             // For swap request messages, load the swap details
             if (data.type === 'swap_request' && data.swapId) {
@@ -920,52 +921,51 @@
             
             messages.push(data);
           }
+        }
 
-          // Mark messages as read
-          await markMessagesAsRead(messages);
+        // Mark messages as read
+        await markMessagesAsRead(messages);
 
-          // Display messages
-          messagesContainer.innerHTML = '';
-          
-          messages.forEach(message => {
+        // Display messages
+        messagesContainer.innerHTML = '';
+        
+        messages.forEach(message => {
+          if (message.type === 'swap_request') {
+            messagesContainer.appendChild(displaySwapRequest(message));
+          } else if (message.type === 'swap_response') {
+            messagesContainer.appendChild(displaySwapResponse(message));
+          } else {
+            // Regular message display
+            const isFromCurrentUser = message.from === currentUserId;
+            const profilePic = isFromCurrentUser ? 
+              (currentUserDoc.data()?.profilePic || 'skillio/default_profile.jpg') :
+              (targetUserDoc.data()?.profilePic || 'skillio/default_profile.jpg');
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
-            
-            if (message.type === 'swap_request') {
-              messagesContainer.appendChild(displaySwapRequest(message));
-            } else if (message.type === 'swap_response') {
-              messagesContainer.appendChild(displaySwapResponse(message));
-            } else {
-              // Regular message display
-              const isFromCurrentUser = message.from === currentUserId;
-              const profilePic = isFromCurrentUser ? 
-                (currentUserDoc.data()?.profilePic || 'skillio/default_profile.jpg') :
-                (targetUserDoc.data()?.profilePic || 'skillio/default_profile.jpg');
-              
-              messageDiv.innerHTML = `
-                <div style="display: flex; align-items: start; margin-bottom: 10px;">
-                  <img src="${profilePic}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-                  <div style="flex: 1;">
-                    <div style="font-weight: bold; margin-bottom: 5px;">
-                      ${isFromCurrentUser ? currentUserName : targetUserName}
-                    </div>
-                    <div style="background: ${isFromCurrentUser ? '#007bff' : '#e9ecef'}; 
-                                color: ${isFromCurrentUser ? 'white' : 'black'}; 
-                                padding: 10px; border-radius: 8px; display: inline-block; max-width: 70%;">
-                      ${message.text}
-                    </div>
-                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                      ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
-                    </div>
+            messageDiv.innerHTML = `
+              <div style="display: flex; align-items: start; margin-bottom: 10px;">
+                <img src="${profilePic}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+                <div style="flex: 1;">
+                  <div style="font-weight: bold; margin-bottom: 5px;">
+                    ${isFromCurrentUser ? currentUserName : targetUserName}
+                  </div>
+                  <div style="background: ${isFromCurrentUser ? '#007bff' : '#e9ecef'}; 
+                              color: ${isFromCurrentUser ? 'white' : 'black'}; 
+                              padding: 10px; border-radius: 8px; display: inline-block; max-width: 70%;">
+                    ${message.text || message.message}
+                  </div>
+                  <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
                   </div>
                 </div>
-              `;
-              messagesContainer.appendChild(messageDiv);
-            }
-          });
-
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+              </div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+          }
         });
+
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
       } catch (error) {
         console.error('Error loading messages:', error);
