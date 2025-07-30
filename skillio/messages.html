@@ -715,28 +715,267 @@
       }
 
       try {
-        await db.collection("swaps").add({
+        // Create the swap with pending status
+        const swapRef = await db.collection("swaps").add({
           from: currentUser.uid,
           to: targetUserId,
+          fromName: currentUser.displayName || 'Unknown User',
+          toName: targetUserName,
           date: date,
           startTime: startTime,
           endTime: endTime,
           location: location || '',
           description: description || 'Swap session',
-          status: 'pending',
+          status: 'pending', // New: pending status
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
+
+        // Send a notification message to the recipient
+        await db.collection("messages").add({
+          from: currentUser.uid,
+          to: targetUserId,
+          fromName: currentUser.displayName || 'Unknown User',
+          toName: targetUserName,
+          text: `You have a pending swap request for ${date} at ${startTime}. Click here to view and respond.`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'swap_request', // New: message type
+          swapId: swapRef.id, // Reference to the swap
+          read: false
+        });
+
         closeSwapModal();
-        alert('Swap created successfully! It will appear in your calendar.');
+        alert('Swap request sent! The other user will be notified and can accept or decline.');
       } catch (error) {
         console.error('Error creating swap:', error);
         alert('Error creating swap. Please try again.');
       }
     }
+
+    // New: Function to handle swap responses
+    async function respondToSwap(swapId, response) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+
+      try {
+        const swapRef = db.collection("swaps").doc(swapId);
+        const swapDoc = await swapRef.get();
+        
+        if (!swapDoc.exists) {
+          alert('Swap not found.');
+          return;
+        }
+
+        const swapData = swapDoc.data();
+        
+        if (swapData.to !== currentUser.uid) {
+          alert('You can only respond to swaps sent to you.');
+          return;
+        }
+
+        if (swapData.status !== 'pending') {
+          alert('This swap has already been responded to.');
+          return;
+        }
+
+        // Update swap status
+        await swapRef.update({
+          status: response, // 'accepted' or 'declined'
+          respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Send notification back to the original sender
+        await db.collection("messages").add({
+          from: currentUser.uid,
+          to: swapData.from,
+          fromName: currentUser.displayName || 'Unknown User',
+          toName: swapData.fromName,
+          text: `Your swap request for ${swapData.date} has been ${response}.`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'swap_response',
+          swapId: swapId,
+          response: response,
+          read: false
+        });
+
+        alert(`Swap ${response}!`);
+        
+        // Refresh the conversation if we're in one
+        if (currentConversation) {
+          loadMessages(currentConversation);
+        }
+      } catch (error) {
+        console.error('Error responding to swap:', error);
+        alert('Error responding to swap. Please try again.');
+      }
+    }
+
+    // New: Function to display swap requests in messages
+    function displaySwapRequest(message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+      messageDiv.style.marginBottom = '15px';
+      messageDiv.style.padding = '15px';
+      messageDiv.style.backgroundColor = '#f8f9fa';
+      messageDiv.style.borderRadius = '8px';
+      messageDiv.style.border = '1px solid #e9ecef';
+
+      const swapData = message.swapData; // This will be populated when we load the swap details
+      
+      messageDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+          <strong>Swap Request</strong>
+          <span style="float: right; color: #666; font-size: 12px;">
+            ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
+          </span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <strong>Date:</strong> ${swapData?.date || 'Loading...'}<br>
+          <strong>Time:</strong> ${swapData?.startTime || ''} - ${swapData?.endTime || ''}<br>
+          <strong>Location:</strong> ${swapData?.location || 'Not specified'}<br>
+          <strong>Description:</strong> ${swapData?.description || 'No description'}
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="respondToSwap('${message.swapId}', 'accepted')" 
+                  style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Accept
+          </button>
+          <button onclick="respondToSwap('${message.swapId}', 'declined')" 
+                  style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Decline
+          </button>
+        </div>
+      `;
+
+      return messageDiv;
+    }
+
+    // New: Function to display swap responses
+    function displaySwapResponse(message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+      messageDiv.style.marginBottom = '15px';
+      messageDiv.style.padding = '15px';
+      messageDiv.style.backgroundColor = message.response === 'accepted' ? '#d4edda' : '#f8d7da';
+      messageDiv.style.borderRadius = '8px';
+      messageDiv.style.border = `1px solid ${message.response === 'accepted' ? '#c3e6cb' : '#f5c6cb'}`;
+
+      messageDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+          <strong>Swap ${message.response === 'accepted' ? 'Accepted' : 'Declined'}</strong>
+          <span style="float: right; color: #666; font-size: 12px;">
+            ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
+          </span>
+        </div>
+        <div>
+          ${message.text}
+        </div>
+      `;
+
+      return messageDiv;
+    }
+
+    // Modify the loadMessages function to handle swap messages
+    async function loadMessages(targetUserId) {
+      currentConversation = targetUserId;
+      const messagesContainer = document.getElementById('messages');
+      messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
+
+      try {
+        const currentUser = firebase.auth().currentUser;
+        const currentUserId = currentUser.uid;
+
+        // Get user names
+        const [currentUserDoc, targetUserDoc] = await Promise.all([
+          db.collection("users").doc(currentUserId).get(),
+          db.collection("users").doc(targetUserId).get()
+        ]);
+
+        const currentUserName = currentUserDoc.data()?.displayName || 'Unknown User';
+        const targetUserName = targetUserDoc.data()?.displayName || 'Unknown User';
+
+        // Get messages between these users
+        const messagesQuery = db.collection("messages")
+          .where("from", "in", [currentUserId, targetUserId])
+          .where("to", "in", [currentUserId, targetUserId])
+          .orderBy("timestamp", "asc");
+
+        messagesQuery.onSnapshot(async (snapshot) => {
+          const messages = [];
+          
+          for (const doc of snapshot.docs) {
+            const data = doc.data();
+            data.id = doc.id;
+            
+            // For swap request messages, load the swap details
+            if (data.type === 'swap_request' && data.swapId) {
+              try {
+                const swapDoc = await db.collection("swaps").doc(data.swapId).get();
+                if (swapDoc.exists) {
+                  data.swapData = swapDoc.data();
+                }
+              } catch (error) {
+                console.error('Error loading swap data:', error);
+              }
+            }
+            
+            messages.push(data);
+          }
+
+          // Mark messages as read
+          await markMessagesAsRead(messages);
+
+          // Display messages
+          messagesContainer.innerHTML = '';
+          
+          messages.forEach(message => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            if (message.type === 'swap_request') {
+              messagesContainer.appendChild(displaySwapRequest(message));
+            } else if (message.type === 'swap_response') {
+              messagesContainer.appendChild(displaySwapResponse(message));
+            } else {
+              // Regular message display
+              const isFromCurrentUser = message.from === currentUserId;
+              const profilePic = isFromCurrentUser ? 
+                (currentUserDoc.data()?.profilePic || 'skillio/default_profile.jpg') :
+                (targetUserDoc.data()?.profilePic || 'skillio/default_profile.jpg');
+              
+              messageDiv.innerHTML = `
+                <div style="display: flex; align-items: start; margin-bottom: 10px;">
+                  <img src="${profilePic}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">
+                      ${isFromCurrentUser ? currentUserName : targetUserName}
+                    </div>
+                    <div style="background: ${isFromCurrentUser ? '#007bff' : '#e9ecef'}; 
+                                color: ${isFromCurrentUser ? 'white' : 'black'}; 
+                                padding: 10px; border-radius: 8px; display: inline-block; max-width: 70%;">
+                      ${message.text}
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                      ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
+                    </div>
+                  </div>
+                </div>
+              `;
+              messagesContainer.appendChild(messageDiv);
+            }
+          });
+
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error loading messages</div>';
+      }
+    }
   </script>
 </body>
 </html>
+
 
 
 
