@@ -295,13 +295,23 @@
       const currentUser = firebase.auth().currentUser;
       if (!currentUser) return;
       
+      console.log('Marking messages as read for user:', currentUser.uid);
+      console.log('Messages to check:', messages.length);
+      
       const unreadMessages = messages.filter(m => 
-        m.to === currentUser.uid && !m.read
+        m.to === currentUser.uid && (!m.read || m.read === false)
       );
       
+      console.log('Unread messages found:', unreadMessages.length);
+      
       unreadMessages.forEach(msg => {
+        console.log('Marking message as read:', msg.id);
         db.collection("messages").doc(msg.id).update({
           read: true
+        }).then(() => {
+          console.log('Message marked as read successfully:', msg.id);
+        }).catch(error => {
+          console.error('Error marking message as read:', error);
         });
       });
     }
