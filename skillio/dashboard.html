@@ -247,7 +247,9 @@
             // Get the other user's name
             const otherUserId = data.from === userId ? data.to : data.from;
             const otherUserDoc = await db.collection("users").doc(otherUserId).get();
-            const otherUserName = otherUserDoc.data()?.displayName || 'Unknown User';
+            const otherUserName = otherUserDoc.exists ? 
+              (otherUserDoc.data().displayName || otherUserDoc.data().name || 'User ' + otherUserId.substring(0, 8)) : 
+              'User ' + otherUserId.substring(0, 8);
             
             appointments.push({
               ...data,
