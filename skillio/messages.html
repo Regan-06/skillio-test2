@@ -636,8 +636,14 @@
           db.collection("users").doc(targetUserId).get()
         ]);
         
-        const fromUserName = fromUserDoc.exists ? fromUserDoc.data().displayName || fromUserDoc.data().name || 'Unknown User' : 'Unknown User';
-        const toUserName = toUserDoc.exists ? toUserDoc.data().displayName || toUserDoc.data().name || 'Unknown User' : 'Unknown User';
+        // Try to get names from various possible fields
+        const fromUserName = fromUserDoc.exists ? 
+          (fromUserDoc.data().displayName || fromUserDoc.data().name || currentUser.email || 'User ' + currentUser.uid.substring(0, 8)) : 
+          (currentUser.email || 'User ' + currentUser.uid.substring(0, 8));
+        
+        const toUserName = toUserDoc.exists ? 
+          (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + targetUserId.substring(0, 8)) : 
+          'User ' + targetUserId.substring(0, 8);
 
         // Create the swap with pending status
         const swapRef = await db.collection("swaps").add({
@@ -739,26 +745,37 @@
         if (messagesContainer) {
           console.log('Looking for swap request to remove with swapId:', swapId);
           
-          // Find and remove the swap request message element
-          const swapRequestElements = messagesContainer.querySelectorAll('.message');
-          console.log('Found', swapRequestElements.length, 'message elements');
-          
-          let foundAndRemoved = false;
-          swapRequestElements.forEach((element, index) => {
-            console.log('Checking element', index, ':', element.innerHTML);
+          // Method 1: Try to find by data-swap-id attribute (most reliable)
+          const swapRequestElement = messagesContainer.querySelector(`[data-swap-id="${swapId}"]`);
+          if (swapRequestElement) {
+            console.log('Found swap request element by data-swap-id, removing...');
+            swapRequestElement.remove();
+            console.log('Swap request element removed successfully');
+          } else {
+            console.log('No element found with data-swap-id, trying alternative method...');
             
-            // Check if this element contains the swap request for this swapId
-            // Look for the swapId in the element's HTML content
-            if (element.innerHTML.includes(swapId)) {
-              console.log('Found swap request element to remove (contains swapId)');
-              element.remove(); // Remove the swap request from display
-              foundAndRemoved = true;
+            // Method 2: Fallback to searching by content
+            const swapRequestElements = messagesContainer.querySelectorAll('.message');
+            console.log('Found', swapRequestElements.length, 'message elements');
+            
+            let foundAndRemoved = false;
+            swapRequestElements.forEach((element, index) => {
+              console.log('Checking element', index, ':', element.innerHTML.substring(0, 100) + '...');
+              
+              // Check if this element contains the swap request for this swapId
+              if (element.innerHTML.includes(swapId)) {
+                console.log('Found swap request element to remove (contains swapId)');
+                element.remove(); // Remove the swap request from display
+                foundAndRemoved = true;
+              }
+            });
+            
+            if (!foundAndRemoved) {
+              console.log('No swap request element found to remove by any method');
             }
-          });
-          
-          if (!foundAndRemoved) {
-            console.log('No swap request element found to remove');
           }
+        } else {
+          console.log('Messages container not found');
         }
 
         alert(`Swap ${response}!`);
@@ -779,6 +796,7 @@
       
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message';
+      messageDiv.setAttribute('data-swap-id', message.swapId); // Add unique identifier
       messageDiv.style.marginBottom = '15px';
       messageDiv.style.padding = '15px';
       messageDiv.style.backgroundColor = '#f8f9fa';
@@ -983,7 +1001,6 @@
   </script>
 </body>
 </html>
-
 
 
 
