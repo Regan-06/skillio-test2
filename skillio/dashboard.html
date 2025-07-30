@@ -167,6 +167,12 @@
     <h2>Bookmarked Users</h2>
     <ul id="bookmarkedUsers">Loading bookmarks...</ul>
   </div>
+  <div class="card">
+    <h3>Pending Swap Requests</h3>
+    <ul id="pendingSwaps">
+      <li>Loading...</li>
+    </ul>
+  </div>
 </div>
 <div id="appointmentsSummary" style="margin-top:30px;"></div>
 
@@ -203,63 +209,7 @@
       document.getElementById('accountLevel').textContent = 'Level: ' + (data.level ?? 0);
     });
 
-    // 1. Count upcoming appointments and display details
-    const todayISO = getTodayISO();
-    let appointmentsCount = 0;
-    let futureSwaps = [];
-    try {
-      const [fromSnap, toSnap] = await Promise.all([
-        db.collection('swaps').where('from', '==', userId).get(),
-        db.collection('swaps').where('to', '==', userId).get()
-      ]);
-      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
-      futureSwaps = allSwaps.filter(doc => {
-        const data = doc.data();
-        let swapDate = data.date;
-        if (swapDate instanceof Date) {
-          swapDate = swapDate.toISOString().split('T')[0];
-        }
-        return swapDate && swapDate >= todayISO;
-      });
-      appointmentsCount = futureSwaps.length;
-    } catch (e) {
-      appointmentsCount = 0;
-    }
-    document.getElementById('appointments').textContent = appointmentsCount;
-
-    // Display appointment details
-    const appointmentsList = document.getElementById('appointmentsList');
-    appointmentsList.innerHTML = 'Loading...';
-    if (futureSwaps.length === 0) {
-      appointmentsList.innerHTML = '<li>No upcoming appointments.</li>';
-    } else {
-      // Get all unique other user IDs
-      const userIdsToFetch = futureSwaps.map(doc => {
-        const data = doc.data();
-        return data.from === userId ? data.to : data.from;
-      });
-      const uniqueUserIds = [...new Set(userIdsToFetch)];
-      const userProfiles = {};
-      await Promise.all(uniqueUserIds.map(async uid => {
-        const userDoc = await db.collection('users').doc(uid).get();
-        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
-      }));
-      appointmentsList.innerHTML = '';
-      futureSwaps.forEach(doc => {
-        const data = doc.data();
-        const otherUserId = data.from === userId ? data.to : data.from;
-        const otherUserName = userProfiles[otherUserId] || 'Unknown User';
-        const desc = data.description || 'No description';
-        const date = data.date || 'No date';
-        const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
-        const status = data.status ? `Status: ${data.status}` : '';
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>Date:</strong> ${date} <strong>Time:</strong> ${time}<br><strong>With:</strong> ${otherUserName}<br><strong>Description:</strong> ${desc}<br><strong>${status}</strong>`;
-        appointmentsList.appendChild(li);
-      });
-    }
-
-    // 2. Count swaps completed (feedback, not incomplete)
+    // 1. Count swaps completed (feedback, not incomplete)
     let swapsCompleted = 0;
     try {
       const feedbackSnap = await db.collection('swap_feedback')
@@ -271,6 +221,48 @@
       swapsCompleted = 0;
     }
     document.getElementById('swapsCompleted').textContent = swapsCompleted;
+
+    // 2. Get upcoming appointments (only accepted swaps)
+    const todayISO = getTodayISO();
+    const appointments = [];
+    try {
+      const appointmentsSnapshot = await db.collection("swaps")
+        .where("date", ">=", todayISO)
+        .where("status", "==", "accepted") // Only show accepted swaps
+        .orderBy("date", "asc")
+        .orderBy("startTime", "asc")
+        .get();
+
+      for (const doc of appointmentsSnapshot.docs) {
+        const data = doc.data();
+        // Get the other user's name
+        const otherUserId = data.from === userId ? data.to : data.from;
+        const otherUserDoc = await db.collection("users").doc(otherUserId).get();
+        const otherUserName = otherUserDoc.data()?.displayName || 'Unknown User';
+        
+        appointments.push({
+          ...data,
+          otherUserName: otherUserName
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching appointments:", e);
+    }
+    document.getElementById('appointments').textContent = appointments.length;
+
+    // Display upcoming appointments
+    const appointmentsList = document.getElementById('appointmentsList');
+    if (appointments.length > 0) {
+      appointmentsList.innerHTML = appointments.map(appointment => `
+        <li>
+          <strong>${appointment.otherUserName}</strong><br>
+          <small>${appointment.description}</small><br>
+          <small>${appointment.date} at ${appointment.startTime}</small>
+        </li>
+      `).join('');
+    } else {
+      appointmentsList.innerHTML = '<li>No upcoming appointments</li>';
+    }
 
     // 3. Badges
     const badgeList = document.getElementById('badgeList');
@@ -317,6 +309,39 @@
           // Skip if user doesn't exist
         }
       }
+    }
+
+    // Load pending swap requests
+    const pendingSwapsSnapshot = await db.collection("swaps")
+      .where("from", "==", userId)
+      .where("status", "==", "pending")
+      .orderBy("date", "asc")
+      .get();
+
+    const pendingSwaps = [];
+    for (const doc of pendingSwapsSnapshot.docs) {
+      const data = doc.data();
+      const toUserDoc = await db.collection("users").doc(data.to).get();
+      const toUserName = toUserDoc.data()?.displayName || 'Unknown User';
+      
+      pendingSwaps.push({
+        ...data,
+        toUserName: toUserName
+      });
+    }
+
+    const pendingSwapsList = document.getElementById('pendingSwaps');
+    if (pendingSwaps.length > 0) {
+      pendingSwapsList.innerHTML = pendingSwaps.map(swap => `
+        <li>
+          <strong>${swap.toUserName}</strong><br>
+          <small>${swap.description}</small><br>
+          <small>${swap.date} at ${swap.startTime}</small><br>
+          <small style="color: #ff9800;">⏳ Waiting for response</small>
+        </li>
+      `).join('');
+    } else {
+      pendingSwapsList.innerHTML = '<li>No pending requests</li>';
     }
 
     // Appointments summary (below dashboard)
