@@ -712,9 +712,23 @@
           read: false
         });
 
+        // Remove the swap request message from the display
+        const messagesContainer = document.getElementById('messages');
+        if (messagesContainer) {
+          // Find and remove the swap request message element
+          const swapRequestElements = messagesContainer.querySelectorAll('.message');
+          swapRequestElements.forEach(element => {
+            // Check if this element contains the swap request for this swapId
+            const acceptButton = element.querySelector(`button[onclick*="${swapId}"]`);
+            if (acceptButton) {
+              element.remove(); // Remove the swap request from display
+            }
+          });
+        }
+
         alert(`Swap ${response}!`);
         
-        // Refresh the conversation if we're in one
+        // Refresh the conversation to show the response message
         if (currentConversation) {
           loadMessages(currentConversation);
         }
@@ -934,6 +948,7 @@
   </script>
 </body>
 </html>
+
 
 
 
