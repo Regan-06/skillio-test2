@@ -630,12 +630,21 @@
       }
 
       try {
+        // Get user names from the users collection
+        const [fromUserDoc, toUserDoc] = await Promise.all([
+          db.collection("users").doc(currentUser.uid).get(),
+          db.collection("users").doc(targetUserId).get()
+        ]);
+        
+        const fromUserName = fromUserDoc.exists ? fromUserDoc.data().displayName || fromUserDoc.data().name || 'Unknown User' : 'Unknown User';
+        const toUserName = toUserDoc.exists ? toUserDoc.data().displayName || toUserDoc.data().name || 'Unknown User' : 'Unknown User';
+
         // Create the swap with pending status
         const swapRef = await db.collection("swaps").add({
           from: currentUser.uid,
           to: targetUserId,
-          fromName: currentUser.displayName || 'Unknown User',
-          toName: targetUserName,
+          fromName: fromUserName,
+          toName: toUserName,
           date: date,
           startTime: startTime,
           endTime: endTime,
@@ -649,8 +658,8 @@
         await db.collection("messages").add({
           from: currentUser.uid,
           to: targetUserId,
-          fromName: currentUser.displayName || 'Unknown User',
-          toName: targetUserName,
+          fromName: fromUserName,
+          toName: toUserName,
           text: `You have a pending swap request for ${date} at ${startTime}. Click here to view and respond.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           type: 'swap_request', // New: message type
@@ -668,36 +677,48 @@
 
     // New: Function to handle swap responses
     async function respondToSwap(swapId, response) {
+      console.log('respondToSwap called with swapId:', swapId, 'response:', response); // Debug log
+      
       const currentUser = firebase.auth().currentUser;
-      if (!currentUser) return;
+      if (!currentUser) {
+        console.log('No current user found'); // Debug log
+        return;
+      }
 
       try {
+        console.log('Starting swap response process...'); // Debug log
         const swapRef = db.collection("swaps").doc(swapId);
         const swapDoc = await swapRef.get();
         
         if (!swapDoc.exists) {
+          console.log('Swap not found:', swapId); // Debug log
           alert('Swap not found.');
           return;
         }
 
         const swapData = swapDoc.data();
+        console.log('Swap data:', swapData); // Debug log
         
         if (swapData.to !== currentUser.uid) {
+          console.log('User not authorized to respond to this swap'); // Debug log
           alert('You can only respond to swaps sent to you.');
           return;
         }
 
         if (swapData.status !== 'pending') {
+          console.log('Swap already responded to, status:', swapData.status); // Debug log
           alert('This swap has already been responded to.');
           return;
         }
 
+        console.log('Updating swap status to:', response); // Debug log
         // Update swap status
         await swapRef.update({
           status: response, // 'accepted' or 'declined'
           respondedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        console.log('Sending response message...'); // Debug log
         // Send notification back to the original sender
         await db.collection("messages").add({
           from: currentUser.uid,
@@ -712,6 +733,7 @@
           read: false
         });
 
+        console.log('Removing swap request from display...'); // Debug log
         // Remove the swap request message from the display
         const messagesContainer = document.getElementById('messages');
         if (messagesContainer) {
@@ -961,7 +983,6 @@
   </script>
 </body>
 </html>
-
 
 
 
