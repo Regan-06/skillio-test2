@@ -373,48 +373,44 @@
   appointmentsSummary.innerHTML = 'Loading...';
   auth.onAuthStateChanged(async user => {
     if (!user) return location.href = "auth.html";
-    const userId = user.uid;
+    const currentUser = user;
+    // Get upcoming appointments (only accepted swaps)
     const todayISO = new Date().toISOString().split('T')[0];
-    Promise.all([
-      db.collection('swaps').where('from', '==', userId).get(),
-      db.collection('swaps').where('to', '==', userId).get()
-    ]).then(async ([fromSnap, toSnap]) => {
-      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
-      const futureSwaps = allSwaps.filter(doc => {
-        const data = doc.data();
-        let swapDate = data.date;
-        if (swapDate instanceof Date) swapDate = swapDate.toISOString().split('T')[0];
-        return swapDate && swapDate >= todayISO;
+    const appointmentsSnapshot = await db.collection("swaps")
+      .where("date", ">=", todayISO)
+      .where("status", "==", "accepted") // Only show accepted swaps
+      .orderBy("date", "asc")
+      .orderBy("startTime", "asc")
+      .get();
+
+    const appointments = [];
+    for (const doc of appointmentsSnapshot.docs) {
+      const data = doc.data();
+      // Get the other user's name
+      const otherUserId = data.from === currentUser.uid ? data.to : data.from;
+      const otherUserDoc = await db.collection("users").doc(otherUserId).get();
+      const otherUserName = otherUserDoc.data()?.displayName || 'Unknown User';
+      
+      appointments.push({
+        ...data,
+        otherUserName: otherUserName
       });
-      const userIdsToFetch = futureSwaps.map(doc => {
-        const data = doc.data();
-        return data.from === userId ? data.to : data.from;
+    }
+    appointmentsSummary.innerHTML = '';
+    if (appointments.length === 0) {
+      appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
+    } else {
+      const list = document.createElement('ul');
+      appointments.forEach(app => {
+        const date = app.date || 'No date';
+        const time = app.startTime && app.endTime ? `${app.startTime} - ${app.endTime}` : '';
+        const desc = app.description || 'No description';
+        const li = document.createElement('li');
+        li.textContent = `${date} ${time} — With ${app.otherUserName}: ${desc}`;
+        list.appendChild(li);
       });
-      const uniqueUserIds = [...new Set(userIdsToFetch)];
-      const userProfiles = {};
-      await Promise.all(uniqueUserIds.map(async uid => {
-        const userDoc = await db.collection('users').doc(uid).get();
-        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
-      }));
-      appointmentsSummary.innerHTML = '';
-      if (futureSwaps.length === 0) {
-        appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
-      } else {
-        const list = document.createElement('ul');
-        futureSwaps.forEach(doc => {
-          const data = doc.data();
-          const otherUserId = data.from === userId ? data.to : data.from;
-          const otherUserName = userProfiles[otherUserId] || 'Unknown User';
-          const desc = data.description || 'No description';
-          const date = data.date || 'No date';
-          const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
-          const li = document.createElement('li');
-          li.textContent = `${date} ${time} — With ${otherUserName}: ${desc}`;
-          list.appendChild(li);
-        });
-        appointmentsSummary.appendChild(list);
-      }
-    });
+      appointmentsSummary.appendChild(list);
+    }
   });
 
   auth.onAuthStateChanged(user => {
