@@ -163,6 +163,10 @@
     <h2>Your Badges</h2>
     <ul id="badgeList">Loading badges...</ul>
   </div>
+  <div class="card">
+    <h2>Bookmarked Users</h2>
+    <ul id="bookmarkedUsers">Loading bookmarks...</ul>
+  </div>
 </div>
 <div id="appointmentsSummary" style="margin-top:30px;"></div>
 
@@ -288,6 +292,30 @@
         const li = document.createElement('li');
         li.innerHTML = `<img src="${badge.img}" alt="${badge.alt}" class="badge-image"><span style="margin-left: 10px;">${badge.name}</span>`;
         badgeList.appendChild(li);
+      }
+    }
+
+    // 4. Bookmarked Users
+    const bookmarkedUsers = document.getElementById('bookmarkedUsers');
+    bookmarkedUsers.innerHTML = 'Loading...';
+    const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
+    if (bookmarksSnap.empty) {
+      bookmarkedUsers.innerHTML = '<li>No bookmarked users yet.</li>';
+    } else {
+      bookmarkedUsers.innerHTML = '';
+      for (const bookmarkDoc of bookmarksSnap.docs) {
+        const bookmarkedUserId = bookmarkDoc.id;
+        try {
+          const userDoc = await db.collection('users').doc(bookmarkedUserId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="profile.html?user=${bookmarkedUserId}" style="color: #00bcd4; text-decoration: none;">${userData.name || 'Unknown User'}</a>`;
+            bookmarkedUsers.appendChild(li);
+          }
+        } catch (e) {
+          // Skip if user doesn't exist
+        }
       }
     }
 
