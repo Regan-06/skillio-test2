@@ -91,9 +91,11 @@
         } catch (e) {}
         // Fetch all messages between currentUserId and targetUserId
         const allMsgsSnap = await db.collection("messages").orderBy("timestamp").get();
-        const msgs = allMsgsSnap.docs.map(doc => doc.data()).filter(m =>
+        const msgs = allMsgsSnap.docs.map(doc => ({...doc.data(), id: doc.id})).filter(m =>
           (m.from === currentUserId && m.to === targetUserId) || (m.from === targetUserId && m.to === currentUserId)
         );
+        // Mark messages as read
+        markMessagesAsRead(msgs);
         // Render conversation
         let convoDiv = document.createElement('div');
         convoDiv.className = 'conversation';
@@ -130,7 +132,8 @@
             to: targetUserId,
             toName: userName,
             message: text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            read: false
           }).then(() => {
             // Add new message with current user's profilePic
             const userDocPromise = db.collection('users').doc(currentUserId).get();
@@ -178,9 +181,11 @@
             msgDiv.innerHTML = "<p>Loading chat...</p>";
             msgDiv.style.display = "block";
             const allMsgs = await db.collection("messages").orderBy("timestamp").get();
-            const msgs = allMsgs.docs.map(doc => doc.data()).filter(m =>
+            const msgs = allMsgs.docs.map(doc => ({...doc.data(), id: doc.id})).filter(m =>
               (m.from === currentUserId && m.to === userId) || (m.from === userId && m.to === currentUserId)
             );
+            // Mark messages as read when conversation is opened
+            markMessagesAsRead(msgs);
             msgDiv.innerHTML = "";
             for (const m of msgs) {
               const sender = m.from === currentUserId ? "You" : m.fromName;
@@ -209,7 +214,8 @@
                 to: userId,
                 toName: userName,
                 message: text,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                read: false
               }).then(() => {
                 const userDocPromise = db.collection('users').doc(currentUserId).get();
                 userDocPromise.then(userDoc => {
@@ -254,6 +260,51 @@
         });
       }
     });
+
+    function sendMessage(event, toUserId, toUserName) {
+      event.preventDefault();
+      const form = event.target;
+      const message = form.message.value.trim();
+      if (!message) return;
+
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        alert("You must be signed in to send messages.");
+        return;
+      }
+
+      db.collection("messages").add({
+        from: currentUser.uid,
+        fromName: currentUser.displayName || "Anonymous",
+        to: toUserId,
+        toName: toUserName,
+        message: message,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false
+      }).then(() => {
+        form.message.value = "";
+        window.location.href = "messages.html";
+      }).catch(error => {
+        console.error("Error sending message:", error);
+        alert("Error sending message. Try again.");
+      });
+    }
+
+    // Mark messages as read when displayed
+    function markMessagesAsRead(messages) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      
+      const unreadMessages = messages.filter(m => 
+        m.to === currentUser.uid && !m.read
+      );
+      
+      unreadMessages.forEach(msg => {
+        db.collection("messages").doc(msg.id).update({
+          read: true
+        });
+      });
+    }
   </script>
 </body>
 </html>
