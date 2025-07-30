@@ -811,6 +811,8 @@
 
     // New: Function to display swap requests in messages
     function displaySwapRequest(message) {
+      console.log('Creating swap request display for:', message); // Debug log
+      
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message';
       messageDiv.style.marginBottom = '15px';
@@ -820,6 +822,7 @@
       messageDiv.style.border = '1px solid #e9ecef';
 
       const swapData = message.swapData; // This will be populated when we load the swap details
+      console.log('Swap data:', swapData); // Debug log
       
       messageDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
@@ -930,9 +933,13 @@
         messagesContainer.innerHTML = '';
         
         messages.forEach(message => {
+          console.log('Processing message:', message); // Debug log
+          
           if (message.type === 'swap_request') {
+            console.log('Displaying swap request:', message); // Debug log
             messagesContainer.appendChild(displaySwapRequest(message));
           } else if (message.type === 'swap_response') {
+            console.log('Displaying swap response:', message); // Debug log
             messagesContainer.appendChild(displaySwapResponse(message));
           } else {
             // Regular message display
@@ -940,6 +947,10 @@
             const profilePic = isFromCurrentUser ? 
               (currentUserDoc.data()?.profilePic || 'skillio/default_profile.jpg') :
               (targetUserDoc.data()?.profilePic || 'skillio/default_profile.jpg');
+            
+            // Get the message content from the correct field
+            const messageContent = message.text || message.message || 'No message content';
+            console.log('Regular message content:', messageContent); // Debug log
             
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
@@ -953,7 +964,7 @@
                   <div style="background: ${isFromCurrentUser ? '#007bff' : '#e9ecef'}; 
                               color: ${isFromCurrentUser ? 'white' : 'black'}; 
                               padding: 10px; border-radius: 8px; display: inline-block; max-width: 70%;">
-                    ${message.text || message.message}
+                    ${messageContent}
                   </div>
                   <div style="font-size: 12px; color: #666; margin-top: 5px;">
                     ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
