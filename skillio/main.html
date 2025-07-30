@@ -279,13 +279,18 @@
           else if (data.paidSession) status = "Available for Paid Sessions";
 
           div.innerHTML = `
-            <a href="profile.html?user=${doc.id}">${data.name}</a> - ${data.skillOffered}<br>
-            <small>${data.description || ''}</small><br>
-            <span>${status}</span><br><br>
-            <form onsubmit="sendMessage(event, '${doc.id}', '${data.name}')">
-              <input type="text" name="message" placeholder="Write a message..." required />
-              <button type="submit">Send</button>
-            </form>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <a href="profile.html?user=${doc.id}">${data.name}</a> - ${data.skillOffered}<br>
+                <small>${data.description || ''}</small><br>
+                <span>${status}</span><br><br>
+                <form onsubmit="sendMessage(event, '${doc.id}', '${data.name}')">
+                  <input type="text" name="message" placeholder="Write a message..." required />
+                  <button type="submit">Send</button>
+                </form>
+              </div>
+              <button class="bookmark-btn" onclick="toggleBookmark(event, '${doc.id}', '${data.name}', '${data.skillOffered}')" style="background:none;border:none;font-size:1.5em;cursor:pointer;margin-left:10px;">☆</button>
+            </div>
           `;
           resultsDiv.appendChild(div);
         });
@@ -320,6 +325,51 @@
       }).catch(error => {
         console.error("Error sending message:", error);
         alert("Error sending message. Try again.");
+      });
+    }
+
+    function toggleBookmark(event, userId, userName, skillOffered) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        alert("You must be signed in to bookmark users.");
+        return;
+      }
+      
+      const bookmarkBtn = event.target;
+      const ref = db.collection('users').doc(currentUser.uid).collection('bookmarks').doc(userId);
+      
+      ref.get().then(doc => {
+        if (doc.exists) {
+          // Remove bookmark
+          ref.delete().then(() => {
+            bookmarkBtn.textContent = '☆';
+            alert(`Removed ${userName} from bookmarks`);
+          });
+        } else {
+          // Add bookmark
+          ref.set({
+            userName: userName,
+            skillOffered: skillOffered,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            bookmarkBtn.textContent = '★';
+            alert(`Bookmarked ${userName} (${skillOffered})`);
+          });
+        }
+      });
+    }
+
+    // Update bookmark button states when search results load
+    function updateBookmarkStates() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      
+      const bookmarkBtns = document.querySelectorAll('.bookmark-btn');
+      bookmarkBtns.forEach(btn => {
+        const userId = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+        db.collection('users').doc(currentUser.uid).collection('bookmarks').doc(userId).get().then(doc => {
+          btn.textContent = doc.exists ? '★' : '☆';
+        });
       });
     }
 
