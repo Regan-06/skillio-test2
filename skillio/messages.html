@@ -805,9 +805,32 @@
 
         alert(`Swap ${response}!`);
         
-        // Refresh the conversation to show the response message
-        if (currentConversation) {
-          loadMessages(currentConversation);
+        // Don't reload all messages - just add the response message to the current conversation
+        // if (currentConversation) {
+        //   loadMessages(currentConversation);
+        // }
+        
+        // Instead, just add the response message to the current display
+        const responseContainer = document.getElementById('messages');
+        if (responseContainer) {
+          // Create and add the response message
+          const responseMessage = {
+            from: currentUser.uid,
+            to: swapData.from,
+            fromName: currentUser.displayName || 'Unknown User',
+            toName: swapData.fromName,
+            text: `Your swap request for ${swapData.date} has been ${response}.`,
+            timestamp: new Date(),
+            type: 'swap_response',
+            swapId: swapId,
+            response: response,
+            read: false
+          };
+          
+          // Add the response message to the display
+          const responseElement = displaySwapResponse(responseMessage);
+          responseContainer.appendChild(responseElement);
+          responseContainer.scrollTop = responseContainer.scrollHeight;
         }
       } catch (error) {
         console.error('Error responding to swap:', error);
@@ -1051,7 +1074,6 @@
   </script>
 </body>
 </html>
-
 
 
 
