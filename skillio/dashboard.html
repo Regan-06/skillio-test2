@@ -154,22 +154,12 @@
     <ul id="appointmentsList"></ul>
   </div>
   <div class="card">
-    <h2>Suggested Matches</h2>
-    <ul id="suggestedMatches">
-      <li>Coming soon...</li>
-    </ul>
-  </div>
-  <div class="card">
     <h2>Your Badges</h2>
     <ul id="badgeList">Loading badges...</ul>
   </div>
   <div class="card">
-    <h2>Bookmarked Users</h2>
-    <ul id="bookmarkedUsers">Loading bookmarks...</ul>
-  </div>
-  <div class="card">
-    <h3>Pending Swap Requests</h3>
-    <ul id="pendingSwaps">
+    <h3>Bookmarked Users</h3>
+    <ul id="bookmarkedUsers">
       <li>Loading...</li>
     </ul>
   </div>
@@ -331,39 +321,6 @@
       }
     }
 
-    // Load pending swap requests
-    const pendingSwapsSnapshot = await db.collection("swaps")
-      .where("from", "==", userId)
-      .where("status", "==", "pending")
-      .orderBy("date", "asc")
-      .get();
-
-    const pendingSwaps = [];
-    for (const doc of pendingSwapsSnapshot.docs) {
-      const data = doc.data();
-      const toUserDoc = await db.collection("users").doc(data.to).get();
-      const toUserName = toUserDoc.data()?.displayName || 'Unknown User';
-      
-      pendingSwaps.push({
-        ...data,
-        toUserName: toUserName
-      });
-    }
-
-    const pendingSwapsList = document.getElementById('pendingSwaps');
-    if (pendingSwaps.length > 0) {
-      pendingSwapsList.innerHTML = pendingSwaps.map(swap => `
-        <li>
-          <strong>${swap.toUserName}</strong><br>
-          <small>${swap.description}</small><br>
-          <small>${swap.date} at ${swap.startTime}</small><br>
-          <small style="color: #ff9800;">⏳ Waiting for response</small>
-        </li>
-      `).join('');
-    } else {
-      pendingSwapsList.innerHTML = '<li>No pending requests</li>';
-    }
-
     // Appointments summary (below dashboard)
     const appointmentsSummary = document.getElementById('appointmentsSummary');
     appointmentsSummary.innerHTML = 'Loading...';
@@ -412,5 +369,6 @@
 </script>
 </body>
 </html>
+
 
 
