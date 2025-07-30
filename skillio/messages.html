@@ -683,6 +683,7 @@
 
     // New: Function to handle swap responses
     async function respondToSwap(swapId, response) {
+      alert(`respondToSwap called! swapId: ${swapId}, response: ${response}`); // Simple test
       console.log('respondToSwap called with swapId:', swapId, 'response:', response); // Debug log
       
       const currentUser = firebase.auth().currentUser;
@@ -751,6 +752,7 @@
             console.log('Found swap request element by data-swap-id, removing...');
             swapRequestElement.remove();
             console.log('Swap request element removed successfully');
+            alert('Swap request removed from display!'); // Test alert
           } else {
             console.log('No element found with data-swap-id, trying alternative method...');
             
@@ -767,15 +769,18 @@
                 console.log('Found swap request element to remove (contains swapId)');
                 element.remove(); // Remove the swap request from display
                 foundAndRemoved = true;
+                alert('Swap request removed by content search!'); // Test alert
               }
             });
             
             if (!foundAndRemoved) {
               console.log('No swap request element found to remove by any method');
+              alert('Could not find swap request element to remove!'); // Test alert
             }
           }
         } else {
           console.log('Messages container not found');
+          alert('Messages container not found!'); // Test alert
         }
 
         alert(`Swap ${response}!`);
@@ -787,6 +792,23 @@
       } catch (error) {
         console.error('Error responding to swap:', error);
         alert('Error responding to swap. Please try again.');
+      }
+    }
+
+    // Test function to manually test removal
+    function testRemoveSwapRequest(swapId) {
+      alert(`Testing removal for swapId: ${swapId}`);
+      const messagesContainer = document.getElementById('messages');
+      if (messagesContainer) {
+        const swapRequestElement = messagesContainer.querySelector(`[data-swap-id="${swapId}"]`);
+        if (swapRequestElement) {
+          swapRequestElement.remove();
+          alert('Test removal successful!');
+        } else {
+          alert('Test removal failed - element not found');
+        }
+      } else {
+        alert('Messages container not found');
       }
     }
 
@@ -827,6 +849,10 @@
           <button onclick="respondToSwap('${message.swapId}', 'declined')" 
                   style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
             Decline
+          </button>
+          <button onclick="testRemoveSwapRequest('${message.swapId}')" 
+                  style="background: #ffc107; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Test Remove
           </button>
         </div>
       `;
@@ -1001,6 +1027,7 @@
   </script>
 </body>
 </html>
+
 
 
 
