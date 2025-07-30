@@ -52,6 +52,7 @@
       border-radius: 20px;
       font-size: 0.95rem;
       cursor: pointer;
+      position: relative;
     }
 
     .nav-buttons a button:hover,
@@ -59,6 +60,29 @@
       background-color: #0097a7;
       transform: scale(1.1);
       box-shadow: 0 0 12px rgba(0, 188, 212, 0.6);
+    }
+
+    .message-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background-color: #ff4444;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
     }
 
     h1 {
@@ -199,7 +223,7 @@
 
   <div class="nav-buttons">
     <a href="profile.html"><button>Profile</button></a>
-    <a href="messages.html"><button>Messages</button></a>
+    <a href="messages.html"><button id="messagesBtn">Messages<span id="messageBadge" class="message-badge" style="display:none;"></span></button></a>
     <a href="dashboard.html"><button>Dashboard</button></a>
     <a href="calendar.html"><button>Calendar</button></a>
     <a href="feed.html"><button>Feed</button></a>
@@ -241,6 +265,29 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Check for unread messages
+    function checkUnreadMessages() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      
+      const messageBadge = document.getElementById('messageBadge');
+      const messagesBtn = document.getElementById('messagesBtn');
+      
+      // Listen for new messages in real-time
+      db.collection("messages")
+        .where("to", "==", currentUser.uid)
+        .where("read", "==", false)
+        .onSnapshot(snapshot => {
+          const unreadCount = snapshot.size;
+          if (unreadCount > 0) {
+            messageBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            messageBadge.style.display = 'flex';
+          } else {
+            messageBadge.style.display = 'none';
+          }
+        });
+    }
+
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
       .then(() => {
         firebase.auth().onAuthStateChanged(user => {
@@ -248,6 +295,7 @@
             window.location.href = "auth.html";
           } else {
             console.log("User is signed in as:", user.email);
+            checkUnreadMessages();
           }
         });
       })
