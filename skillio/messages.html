@@ -146,6 +146,112 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+
+    /* Custom Calendar Picker */
+    .calendar-picker {
+      position: relative;
+    }
+
+    .calendar-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      cursor: pointer;
+      background-color: white;
+    }
+
+    .calendar-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1001;
+      display: none;
+      margin-top: 4px;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .calendar-nav {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      color: #00bcd4;
+    }
+
+    .calendar-nav:hover {
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+
+    .calendar-title {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background-color: #eee;
+    }
+
+    .calendar-day-header {
+      background: #f8f8f8;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #666;
+    }
+
+    .calendar-day {
+      background: white;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .calendar-day:hover {
+      background-color: #f0f0f0;
+    }
+
+    .calendar-day.selected {
+      background-color: #00bcd4;
+      color: white;
+    }
+
+    .calendar-day.today {
+      background-color: #e3f2fd;
+      color: #00bcd4;
+      font-weight: bold;
+    }
+
+    .calendar-day.other-month {
+      color: #ccc;
+    }
+
+    .calendar-day.disabled {
+      color: #ccc;
+      cursor: not-allowed;
+    }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
@@ -412,6 +518,104 @@
       });
     }
 
+    // Calendar functionality
+    let currentCalendarDate = new Date();
+    let selectedDate = null;
+
+    function openCalendar() {
+      const dropdown = document.getElementById('calendarDropdown');
+      dropdown.style.display = 'block';
+      renderCalendar();
+    }
+
+    function closeCalendar() {
+      const dropdown = document.getElementById('calendarDropdown');
+      dropdown.style.display = 'none';
+    }
+
+    function renderCalendar() {
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      
+      document.getElementById('calendarTitle').textContent = 
+        currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - firstDay.getDay());
+      
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      
+      // Add day headers
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = day;
+        grid.appendChild(header);
+      });
+      
+      // Add calendar days
+      for (let i = 0; i < 42; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        dayElement.textContent = date.getDate();
+        
+        // Check if it's today
+        const today = new Date();
+        if (date.toDateString() === today.toDateString()) {
+          dayElement.classList.add('today');
+        }
+        
+        // Check if it's selected
+        if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
+          dayElement.classList.add('selected');
+        }
+        
+        // Check if it's in current month
+        if (date.getMonth() !== month) {
+          dayElement.classList.add('other-month');
+        }
+        
+        // Disable past dates
+        if (date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+          dayElement.classList.add('disabled');
+        } else {
+          dayElement.onclick = () => selectDate(date);
+        }
+        
+        grid.appendChild(dayElement);
+      }
+    }
+
+    function selectDate(date) {
+      selectedDate = date;
+      document.getElementById('swapDate').value = date.toISOString().split('T')[0];
+      closeCalendar();
+    }
+
+    function previousMonth() {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+      renderCalendar();
+    }
+
+    // Close calendar when clicking outside
+    document.addEventListener('click', function(event) {
+      const calendar = document.querySelector('.calendar-picker');
+      if (calendar && !calendar.contains(event.target)) {
+        closeCalendar();
+      }
+    });
+
     // iPhone-style Swap Modal
     function openSwapModal(targetUserId, targetUserName) {
       const modal = document.createElement('div');
@@ -425,7 +629,19 @@
             <form id="swapForm">
               <div class="form-group">
                 <label for="swapDate">Date</label>
-                <input type="date" id="swapDate" required>
+                <div class="calendar-picker">
+                  <input type="text" id="swapDate" class="calendar-input" readonly placeholder="Select a date" required onclick="openCalendar()">
+                  <div class="calendar-dropdown" id="calendarDropdown">
+                    <div class="calendar-header">
+                      <button class="calendar-nav" onclick="previousMonth()">&lt;</button>
+                      <span class="calendar-title" id="calendarTitle">January 2025</span>
+                      <button class="calendar-nav" onclick="nextMonth()">&gt;</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                      <!-- Calendar will be generated here -->
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="form-group">
                 <label for="swapStartTime">Start Time</label>
@@ -457,6 +673,7 @@
       // Set default date to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+      selectedDate = tomorrow;
       document.getElementById('swapDate').value = tomorrow.toISOString().split('T')[0];
       
       // Set default time to current time + 1 hour
