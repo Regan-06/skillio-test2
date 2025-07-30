@@ -31,9 +31,121 @@
     .reply-box button { padding: 8px 16px; background-color: #00bcd4; border: none; color: white; border-radius: 8px;
                         cursor: pointer; font-size: 1rem; }
     .reply-box button:hover { background-color: #0097a7; }
-    .swap-button { margin-top: 10px; background: #4caf50; color: #fff; border: none; padding: 10px;
-                   border-radius: 8px; cursor: pointer; }
-    .swap-button:hover { background: #388e3c; }
+    .swap-button {
+      background-color: #00bcd4;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    /* iPhone-style Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      animation: modalSlideUp 0.3s ease-out;
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      background: #00bcd4;
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .form-group textarea {
+      height: 80px;
+      resize: vertical;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-cancel {
+      background-color: #f0f0f0;
+      color: #666;
+    }
+
+    .btn-cancel:hover {
+      background-color: #e0e0e0;
+    }
+
+    .btn-create {
+      background-color: #00bcd4;
+      color: white;
+    }
+
+    .btn-create:hover {
+      background-color: #0097a7;
+    }
+
+    .btn-create:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
@@ -233,23 +345,7 @@
             const swapButton = document.createElement("button");
             swapButton.className = "swap-button";
             swapButton.textContent = "Set Up Swap";
-            swapButton.onclick = async () => {
-              const date = prompt("Swap date (YYYY-MM-DD):");
-              const start = prompt("Start time (e.g. 2:00 PM):");
-              const end = prompt("End time (e.g. 3:00 PM):");
-              const desc = prompt("Swap description:");
-              if (!date || !start || !end) return alert("Cancelled");
-              await db.collection("swaps").add({
-                from: currentUserId,
-                to: userId,
-                date,
-                startTime: start,
-                endTime: end,
-                description: desc || "Swap session",
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-              alert("Swap created and synced to your calendar.");
-            };
+            swapButton.onclick = () => openSwapModal(userId, userName);
             msgDiv.appendChild(swapButton);
           };
           const msgDiv = document.createElement("div");
@@ -314,6 +410,112 @@
           console.error('Error marking message as read:', error);
         });
       });
+    }
+
+    // iPhone-style Swap Modal
+    function openSwapModal(targetUserId, targetUserName) {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            Create Swap with ${targetUserName}
+          </div>
+          <div class="modal-body">
+            <form id="swapForm">
+              <div class="form-group">
+                <label for="swapDate">Date</label>
+                <input type="date" id="swapDate" required>
+              </div>
+              <div class="form-group">
+                <label for="swapStartTime">Start Time</label>
+                <input type="time" id="swapStartTime" required>
+              </div>
+              <div class="form-group">
+                <label for="swapEndTime">End Time</label>
+                <input type="time" id="swapEndTime" required>
+              </div>
+              <div class="form-group">
+                <label for="swapLocation">Location (optional)</label>
+                <input type="text" id="swapLocation" placeholder="Where will you meet?">
+              </div>
+              <div class="form-group">
+                <label for="swapDescription">Description</label>
+                <textarea id="swapDescription" placeholder="What will you be swapping? (e.g., I'll teach you guitar, you'll help me with cooking)"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-cancel" onclick="closeSwapModal()">Cancel</button>
+            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Create Swap</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.style.display = 'block';
+      
+      // Set default date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('swapDate').value = tomorrow.toISOString().split('T')[0];
+      
+      // Set default time to current time + 1 hour
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      document.getElementById('swapStartTime').value = now.toTimeString().slice(0, 5);
+      now.setHours(now.getHours() + 1);
+      document.getElementById('swapEndTime').value = now.toTimeString().slice(0, 5);
+    }
+
+    function closeSwapModal() {
+      const modal = document.querySelector('.modal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+
+    async function createSwap(targetUserId, targetUserName) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        alert('You must be signed in to create a swap.');
+        return;
+      }
+
+      const date = document.getElementById('swapDate').value;
+      const startTime = document.getElementById('swapStartTime').value;
+      const endTime = document.getElementById('swapEndTime').value;
+      const location = document.getElementById('swapLocation').value;
+      const description = document.getElementById('swapDescription').value;
+
+      if (!date || !startTime || !endTime) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      if (startTime >= endTime) {
+        alert('End time must be after start time.');
+        return;
+      }
+
+      try {
+        await db.collection("swaps").add({
+          from: currentUser.uid,
+          to: targetUserId,
+          date: date,
+          startTime: startTime,
+          endTime: endTime,
+          location: location || '',
+          description: description || 'Swap session',
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        closeSwapModal();
+        alert('Swap created successfully! It will appear in your calendar.');
+      } catch (error) {
+        console.error('Error creating swap:', error);
+        alert('Error creating swap. Please try again.');
+      }
     }
   </script>
 </body>
