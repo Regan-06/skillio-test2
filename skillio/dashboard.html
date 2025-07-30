@@ -226,25 +226,43 @@
     const todayISO = getTodayISO();
     const appointments = [];
     try {
-      const appointmentsSnapshot = await db.collection("swaps")
-        .where("date", ">=", todayISO)
-        .where("status", "==", "accepted") // Only show accepted swaps
-        .orderBy("date", "asc")
-        .orderBy("startTime", "asc")
-        .get();
-
-      for (const doc of appointmentsSnapshot.docs) {
+      // First, get all future swaps for this user
+      const [fromSnap, toSnap] = await Promise.all([
+        db.collection("swaps").where("from", "==", userId).get(),
+        db.collection("swaps").where("to", "==", userId).get()
+      ]);
+      
+      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
+      
+      // Filter for future dates and accepted status
+      for (const doc of allSwaps) {
         const data = doc.data();
-        // Get the other user's name
-        const otherUserId = data.from === userId ? data.to : data.from;
-        const otherUserDoc = await db.collection("users").doc(otherUserId).get();
-        const otherUserName = otherUserDoc.data()?.displayName || 'Unknown User';
+        const swapDate = data.date;
         
-        appointments.push({
-          ...data,
-          otherUserName: otherUserName
-        });
+        // Check if it's a future date
+        if (swapDate && swapDate >= todayISO) {
+          // For old swaps (no status field), treat as accepted
+          // For new swaps, only include if status is 'accepted'
+          if (!data.status || data.status === 'accepted') {
+            // Get the other user's name
+            const otherUserId = data.from === userId ? data.to : data.from;
+            const otherUserDoc = await db.collection("users").doc(otherUserId).get();
+            const otherUserName = otherUserDoc.data()?.displayName || 'Unknown User';
+            
+            appointments.push({
+              ...data,
+              otherUserName: otherUserName
+            });
+          }
+        }
       }
+      
+      // Sort by date and time
+      appointments.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      });
+      
     } catch (e) {
       console.error("Error fetching appointments:", e);
     }
@@ -392,6 +410,5 @@
 </script>
 </body>
 </html>
-
 
 
