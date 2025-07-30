@@ -805,10 +805,10 @@
 
         alert(`Swap ${response}!`);
         
-        // Don't reload all messages - just add the response message to the current conversation
-        // if (currentConversation) {
-        //   loadMessages(currentConversation);
-        // }
+        // Refresh the conversation to show the response message
+        if (currentConversation) {
+          loadMessages(currentConversation);
+        }
         
         // Instead, just add the response message to the current display
         const responseContainer = document.getElementById('messages');
@@ -971,6 +971,12 @@
                 const swapDoc = await db.collection("swaps").doc(data.swapId).get();
                 if (swapDoc.exists) {
                   data.swapData = swapDoc.data();
+                  
+                  // Only show swap requests that are still pending
+                  if (data.swapData.status !== 'pending') {
+                    console.log('Skipping non-pending swap request:', data.swapId, 'status:', data.swapData.status);
+                    continue; // Skip this message
+                  }
                 }
               } catch (error) {
                 console.error('Error loading swap data:', error);
@@ -1074,6 +1080,7 @@
   </script>
 </body>
 </html>
+
 
 
 
