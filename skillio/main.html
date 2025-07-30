@@ -271,14 +271,20 @@
       if (!currentUser) return;
       
       const messageBadge = document.getElementById('messageBadge');
-      const messagesBtn = document.getElementById('messagesBtn');
       
-      // Listen for new messages in real-time
+      // Listen for all messages sent to current user
       db.collection("messages")
         .where("to", "==", currentUser.uid)
-        .where("read", "==", false)
         .onSnapshot(snapshot => {
-          const unreadCount = snapshot.size;
+          let unreadCount = 0;
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            // Count as unread if 'read' field doesn't exist or is false
+            if (!data.read || data.read === false) {
+              unreadCount++;
+            }
+          });
+          
           if (unreadCount > 0) {
             messageBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
             messageBadge.style.display = 'flex';
