@@ -318,58 +318,20 @@
         let convoDiv = document.createElement('div');
         convoDiv.className = 'conversation';
         convoDiv.innerHTML = `<img src="${userProfilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><strong>Conversation with ${userName}</strong>`;
-        let msgDiv = document.createElement('div');
-        msgDiv.className = 'messages';
-        msgDiv.style.display = 'block';
-        for (const m of msgs) {
-          const sender = m.from === currentUserId ? "You" : m.fromName;
-          let senderPic = '';
-          if (m.from === currentUserId) {
-            // Get current user's profilePic
-            const userDoc = await db.collection('users').doc(currentUserId).get();
-            senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
-          } else {
-            senderPic = userProfilePic;
-          }
-          const line = document.createElement("div");
-          line.className = "message-line";
-          line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>${sender}:</strong> ${m.message}`;
-          msgDiv.appendChild(line);
-        }
-        // Reply form
-        const form = document.createElement("form");
-        form.className = "reply-box";
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          const input = form.querySelector("input");
-          const text = input.value.trim();
-          if (!text) return;
-          db.collection("messages").add({
-            from: currentUserId,
-            fromName: currentUserName,
-            to: targetUserId,
-            toName: userName,
-            message: text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            read: false
-          }).then(() => {
-            // Add new message with current user's profilePic
-            const userDocPromise = db.collection('users').doc(currentUserId).get();
-            userDocPromise.then(userDoc => {
-              const senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
-              const line = document.createElement("div");
-              line.className = "message-line";
-              line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>You:</strong> ${text}`;
-              msgDiv.appendChild(line);
-              input.value = "";
-            });
-          });
-        };
-        form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
-        msgDiv.appendChild(form);
+        
+        // Use the new loadMessages function instead of old logic
         conversationList.innerHTML = '';
         conversationList.appendChild(convoDiv);
-        conversationList.appendChild(msgDiv);
+        
+        // Create messages container for the new system
+        const messagesContainer = document.createElement('div');
+        messagesContainer.id = 'messages';
+        messagesContainer.className = 'messages';
+        messagesContainer.style.display = 'block';
+        conversationList.appendChild(messagesContainer);
+        
+        // Load messages using the new system
+        loadMessages(targetUserId);
       } else {
         // ... existing logic to show all conversations ...
         const sent = await db.collection("messages").where("from", "==", currentUserId).get();
@@ -396,63 +358,16 @@
           convo.className = "conversation";
           convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
           convo.onclick = async () => {
+            // Use the new loadMessages function instead of old logic
             msgDiv.innerHTML = "<p>Loading chat...</p>";
             msgDiv.style.display = "block";
-            const allMsgs = await db.collection("messages").orderBy("timestamp").get();
-            const msgs = allMsgs.docs.map(doc => ({...doc.data(), id: doc.id})).filter(m =>
-              (m.from === currentUserId && m.to === userId) || (m.from === userId && m.to === currentUserId)
-            );
-            // Mark messages as read when conversation is opened
-            markMessagesAsRead(msgs);
-            msgDiv.innerHTML = "";
-            for (const m of msgs) {
-              const sender = m.from === currentUserId ? "You" : m.fromName;
-              let senderPic = '';
-              if (m.from === currentUserId) {
-                const userDoc = await db.collection('users').doc(currentUserId).get();
-                senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
-              } else {
-                senderPic = profilePic;
-              }
-              const line = document.createElement("div");
-              line.className = "message-line";
-              line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>${sender}:</strong> ${m.message}`;
-              msgDiv.appendChild(line);
-            }
-            const form = document.createElement("form");
-            form.className = "reply-box";
-            form.onsubmit = (e) => {
-              e.preventDefault();
-              const input = form.querySelector("input");
-              const text = input.value.trim();
-              if (!text) return;
-              db.collection("messages").add({
-                from: currentUserId,
-                fromName: currentUserName,
-                to: userId,
-                toName: userName,
-                message: text,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                read: false
-              }).then(() => {
-                const userDocPromise = db.collection('users').doc(currentUserId).get();
-                userDocPromise.then(userDoc => {
-                  const senderPic = userDoc.exists ? userDoc.data().profilePic || '' : '';
-                  const line = document.createElement("div");
-                  line.className = "message-line";
-                  line.innerHTML = `<img src="${senderPic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;"> <strong>You:</strong> ${text}`;
-                  msgDiv.appendChild(line);
-                  input.value = "";
-                });
-              });
-            };
-            form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
-            msgDiv.appendChild(form);
-            const swapButton = document.createElement("button");
-            swapButton.className = "swap-button";
-            swapButton.textContent = "Set Up Swap";
-            swapButton.onclick = () => openSwapModal(userId, userName);
-            msgDiv.appendChild(swapButton);
+            
+            // Clear existing content and use new system
+            msgDiv.innerHTML = '';
+            msgDiv.id = 'messages'; // Set the ID that loadMessages expects
+            
+            // Load messages using the new system
+            loadMessages(userId);
           };
           const msgDiv = document.createElement("div");
           msgDiv.className = "messages";
@@ -977,6 +892,39 @@
         });
 
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Add reply form
+        const form = document.createElement("form");
+        form.className = "reply-box";
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const input = form.querySelector("input");
+          const text = input.value.trim();
+          if (!text) return;
+          
+          db.collection("messages").add({
+            from: currentUserId,
+            fromName: currentUserName,
+            to: targetUserId,
+            toName: targetUserName,
+            message: text,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            read: false
+          }).then(() => {
+            input.value = "";
+            // Reload messages to show the new message
+            loadMessages(targetUserId);
+          });
+        };
+        form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
+        messagesContainer.appendChild(form);
+
+        // Add swap button
+        const swapButton = document.createElement("button");
+        swapButton.className = "swap-button";
+        swapButton.textContent = "Set Up Swap";
+        swapButton.onclick = () => openSwapModal(targetUserId, targetUserName);
+        messagesContainer.appendChild(swapButton);
 
       } catch (error) {
         console.error('Error loading messages:', error);
