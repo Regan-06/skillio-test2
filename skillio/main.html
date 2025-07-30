@@ -287,6 +287,14 @@
             if (!data.read || data.read === false) {
               unreadCount++;
               console.log('Unread message found:', doc.id);
+              // Initialize missing 'read' field for existing messages
+              if (!data.hasOwnProperty('read')) {
+                db.collection("messages").doc(doc.id).update({
+                  read: false
+                }).then(() => {
+                  console.log('Initialized read field for message:', doc.id);
+                });
+              }
             }
           });
           
@@ -303,6 +311,29 @@
         });
     }
 
+    // Initialize existing messages with read field
+    async function initializeMessageReadFields() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      
+      console.log('Initializing read fields for existing messages...');
+      const messagesSnap = await db.collection("messages")
+        .where("to", "==", currentUser.uid)
+        .get();
+      
+      let updatedCount = 0;
+      for (const doc of messagesSnap.docs) {
+        const data = doc.data();
+        if (!data.hasOwnProperty('read')) {
+          await db.collection("messages").doc(doc.id).update({
+            read: false
+          });
+          updatedCount++;
+        }
+      }
+      console.log(`Updated ${updatedCount} messages with read field`);
+    }
+
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
       .then(() => {
         firebase.auth().onAuthStateChanged(user => {
@@ -310,6 +341,7 @@
             window.location.href = "auth.html";
           } else {
             console.log("User is signed in as:", user.email);
+            initializeMessageReadFields(); // Initialize existing messages
             checkUnreadMessages();
           }
         });
