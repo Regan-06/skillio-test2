@@ -277,19 +277,28 @@
         .where("to", "==", currentUser.uid)
         .onSnapshot(snapshot => {
           let unreadCount = 0;
+          console.log('Checking messages for user:', currentUser.uid);
+          console.log('Total messages received:', snapshot.size);
+          
           snapshot.forEach(doc => {
             const data = doc.data();
+            console.log('Message data:', data);
             // Count as unread if 'read' field doesn't exist or is false
             if (!data.read || data.read === false) {
               unreadCount++;
+              console.log('Unread message found:', doc.id);
             }
           });
+          
+          console.log('Final unread count:', unreadCount);
           
           if (unreadCount > 0) {
             messageBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
             messageBadge.style.display = 'flex';
+            console.log('Showing badge with count:', unreadCount);
           } else {
             messageBadge.style.display = 'none';
+            console.log('Hiding badge - no unread messages');
           }
         });
     }
