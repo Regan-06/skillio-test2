@@ -715,15 +715,28 @@
         // Remove the swap request message from the display
         const messagesContainer = document.getElementById('messages');
         if (messagesContainer) {
+          console.log('Looking for swap request to remove with swapId:', swapId);
+          
           // Find and remove the swap request message element
           const swapRequestElements = messagesContainer.querySelectorAll('.message');
-          swapRequestElements.forEach(element => {
+          console.log('Found', swapRequestElements.length, 'message elements');
+          
+          let foundAndRemoved = false;
+          swapRequestElements.forEach((element, index) => {
+            console.log('Checking element', index, ':', element.innerHTML);
+            
             // Check if this element contains the swap request for this swapId
-            const acceptButton = element.querySelector(`button[onclick*="${swapId}"]`);
-            if (acceptButton) {
+            // Look for the swapId in the element's HTML content
+            if (element.innerHTML.includes(swapId)) {
+              console.log('Found swap request element to remove (contains swapId)');
               element.remove(); // Remove the swap request from display
+              foundAndRemoved = true;
             }
           });
+          
+          if (!foundAndRemoved) {
+            console.log('No swap request element found to remove');
+          }
         }
 
         alert(`Swap ${response}!`);
