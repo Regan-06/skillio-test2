@@ -262,13 +262,18 @@
     // Display upcoming appointments
     const appointmentsList = document.getElementById('appointmentsList');
     if (appointments.length > 0) {
-      appointmentsList.innerHTML = appointments.map(appointment => `
-        <li>
-          <strong>${appointment.otherUserName}</strong><br>
-          <small>${appointment.description}</small><br>
-          <small>${appointment.date} at ${appointment.startTime}</small>
-        </li>
-      `).join('');
+      appointmentsList.innerHTML = appointments.map(appointment => {
+        const paymentInfo = appointment.paymentAmount ? 
+          `<br><small style="color: #00bcd4; font-weight: bold;">Payment: $${appointment.paymentAmount}</small>` : '';
+        
+        return `
+          <li>
+            <strong>${appointment.otherUserName}</strong><br>
+            <small>${appointment.description}</small><br>
+            <small>${appointment.date} at ${appointment.startTime}</small>${paymentInfo}
+          </li>
+        `;
+      }).join('');
     } else {
       appointmentsList.innerHTML = '<li>No upcoming appointments</li>';
     }
