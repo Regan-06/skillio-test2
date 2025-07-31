@@ -666,11 +666,26 @@
       }
 
       try {
+        console.log('Creating swap with data:', {
+          from: currentUser.uid,
+          to: targetUserId,
+          date,
+          startTime,
+          endTime,
+          paymentAmount,
+          paymentMethod
+        });
+
         // Get user names from the users collection
         const [fromUserDoc, toUserDoc] = await Promise.all([
           db.collection("users").doc(currentUser.uid).get(),
           db.collection("users").doc(targetUserId).get()
         ]);
+        
+        console.log('User documents retrieved:', {
+          fromUserExists: fromUserDoc.exists,
+          toUserExists: toUserDoc.exists
+        });
         
         // Try to get names from various possible fields
         const fromUserName = fromUserDoc.exists ? 
@@ -681,8 +696,10 @@
           (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + targetUserId.substring(0, 8)) : 
           'User ' + targetUserId.substring(0, 8);
 
+        console.log('User names resolved:', { fromUserName, toUserName });
+
         // Create the swap with payment information
-        const swapRef = await db.collection("swaps").add({
+        const swapData = {
           from: currentUser.uid,
           to: targetUserId,
           fromName: fromUserName,
@@ -698,12 +715,16 @@
           escrowId: `escrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           status: 'pending_payment', // 'pending_payment', 'paid', 'completed', 'cancelled'
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          paymentDue: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-          autoReleaseTime: new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours from now
-        });
+          paymentDue: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours from now
+          autoReleaseTime: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 48 * 60 * 60 * 1000)) // 48 hours from now
+        };
+
+        console.log('Creating swap with data:', swapData);
+        const swapRef = await db.collection("swaps").add(swapData);
+        console.log('Swap created successfully with ID:', swapRef.id);
 
         // Send a notification message to the recipient
-        await db.collection("messages").add({
+        const messageData = {
           from: currentUser.uid,
           to: targetUserId,
           fromName: fromUserName,
@@ -714,7 +735,11 @@
           swapId: swapRef.id,
           paymentAmount: paymentAmount,
           read: false
-        });
+        };
+
+        console.log('Creating message with data:', messageData);
+        await db.collection("messages").add(messageData);
+        console.log('Message created successfully');
 
         closeSwapModal();
         
@@ -732,7 +757,12 @@
         
       } catch (error) {
         console.error('Error creating swap:', error);
-        alert('Error creating swap. Please try again.');
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        });
+        alert('Error creating swap. Please try again. Error: ' + error.message);
       }
     }
 
