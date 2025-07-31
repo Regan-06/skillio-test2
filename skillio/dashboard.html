@@ -185,13 +185,60 @@
     return today.toISOString().split('T')[0];
   }
 
-  auth.onAuthStateChanged(async user => {
+  // Add real-time listeners for automatic updates
+  function setupRealTimeListeners(userId) {
+    console.log('Setting up real-time listeners for user:', userId);
+    
+    // Listen for changes to swaps collection
+    const swapsListener = db.collection("swaps")
+      .where("from", "==", userId)
+      .onSnapshot(snapshot => {
+        console.log('Swaps updated, refreshing dashboard...');
+        // Refresh the dashboard data
+        loadDashboardData();
+      }, error => {
+        console.error('Error in swaps listener:', error);
+      });
+
+    // Also listen for swaps where user is the recipient
+    const swapsToListener = db.collection("swaps")
+      .where("to", "==", userId)
+      .onSnapshot(snapshot => {
+        console.log('Swaps (to) updated, refreshing dashboard...');
+        // Refresh the dashboard data
+        loadDashboardData();
+      }, error => {
+        console.error('Error in swaps (to) listener:', error);
+      });
+
+    // Store listeners for cleanup
+    window.swapsListener = swapsListener;
+    window.swapsToListener = swapsToListener;
+  }
+
+  // Cleanup function for listeners
+  function cleanupListeners() {
+    if (window.swapsListener) {
+      window.swapsListener();
+      window.swapsListener = null;
+    }
+    if (window.swapsToListener) {
+      window.swapsToListener();
+      window.swapsToListener = null;
+    }
+  }
+
+  // Function to load all dashboard data
+  async function loadDashboardData() {
+    const user = firebase.auth().currentUser;
     if (!user) {
       window.location.href = 'auth.html';
       return;
     }
 
     const userId = user.uid;
+    console.log('Loading dashboard data for user:', userId);
+
     // Get user level for display
     db.collection('users').doc(userId).get().then(doc => {
       const data = doc.data();
@@ -231,8 +278,12 @@
         // Check if it's a future date
         if (swapDate && swapDate >= todayISO) {
           // For old swaps (no status field), treat as accepted
-          // For new swaps, only include if status is 'accepted'
-          if (!data.status || data.status === 'accepted') {
+          // For new swaps, only include if status is 'accepted' or 'pending_payment' with paid status
+          const swapStatus = data.status;
+          const paymentStatus = data.paymentStatus;
+          
+          if (!swapStatus || swapStatus === 'accepted' || 
+              (swapStatus === 'pending_payment' && paymentStatus === 'paid')) {
             // Get the other user's name
             const otherUserId = data.from === userId ? data.to : data.from;
             const otherUserDoc = await db.collection("users").doc(otherUserId).get();
@@ -324,10 +375,29 @@
         }
       }
     }
+
+    console.log('Dashboard data loaded successfully');
+  }
+
+  // Call setupRealTimeListeners after user authentication
+  auth.onAuthStateChanged(async user => {
+    if (!user) {
+      window.location.href = 'auth.html';
+      return;
+    }
+
+    const userId = user.uid;
+    
+    // Setup real-time listeners
+    setupRealTimeListeners(userId);
+    
+    // Load initial data
+    loadDashboardData();
   });
 </script>
 </body>
 </html>
+
 
 
 
