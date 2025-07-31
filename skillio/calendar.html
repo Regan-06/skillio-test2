@@ -150,43 +150,54 @@
 
     @media (max-width: 600px) {
       body {
-        padding: 10px;
+        padding: 20px;
       }
+      
+      .logo {
+        position: relative;
+        top: auto;
+        left: auto;
+        height: 60px;
+        margin: 0 auto 20px auto;
+        display: block;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+        margin-top: 10px;
+        margin-bottom: 15px;
+      }
+      
+      .sub-note {
+        font-size: 0.9rem;
+        padding: 8px;
+        margin-bottom: 20px;
+      }
+      
+      .calendar-controls {
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      
+      .calendar-controls button {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        min-width: 80px;
+      }
+      
       .calendar {
-        padding: 10px;
-        font-size: 0.95em;
-        min-width: unset;
-        overflow-x: auto;
+        padding: 20px;
+        margin: 0 auto;
       }
+      
       .calendar table {
         min-width: 400px;
-        font-size: 0.9em;
       }
-      .calendar th, .calendar td {
-        padding: 6px;
-        font-size: 0.9em;
-      }
-      .calendar-controls {
-        flex-direction: column;
-        gap: 8px;
-      }
-      .calendar-controls button {
-        width: 100%;
-        font-size: 1em;
-        padding: 8px 0;
-      }
-      .logo {
-        height: 60px;
-        top: 10px;
-        left: 10px;
-      }
-      h1 {
-        font-size: 1.2rem;
-        margin-bottom: 6px;
-      }
-      .sub-note {
-        font-size: 0.95em;
-        padding: 6px;
+      
+      .calendar th,
+      .calendar td {
+        padding: 8px;
+        font-size: 0.9rem;
       }
     }
   </style>
