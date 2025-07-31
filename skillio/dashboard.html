@@ -164,7 +164,6 @@
     </ul>
   </div>
 </div>
-<div id="appointmentsSummary" style="margin-top:30px;"></div>
 
 <!-- Firebase + Dashboard Logic -->
 <script>
@@ -320,55 +319,11 @@
         }
       }
     }
-
-    // Appointments summary (below dashboard)
-    const appointmentsSummary = document.getElementById('appointmentsSummary');
-    appointmentsSummary.innerHTML = 'Loading...';
-    // Use the already declared todayISO
-    Promise.all([
-      db.collection('swaps').where('from', '==', userId).get(),
-      db.collection('swaps').where('to', '==', userId).get()
-    ]).then(async ([fromSnap, toSnap]) => {
-      const allSwaps = [...fromSnap.docs, ...toSnap.docs];
-      const futureSwaps = allSwaps.filter(doc => {
-        const data = doc.data();
-        let swapDate = data.date;
-        if (swapDate instanceof Date) swapDate = swapDate.toISOString().split('T')[0];
-        return swapDate && swapDate >= todayISO;
-      });
-      const userIdsToFetch = futureSwaps.map(doc => {
-        const data = doc.data();
-        return data.from === userId ? data.to : data.from;
-      });
-      const uniqueUserIds = [...new Set(userIdsToFetch)];
-      const userProfiles = {};
-      await Promise.all(uniqueUserIds.map(async uid => {
-        const userDoc = await db.collection('users').doc(uid).get();
-        userProfiles[uid] = userDoc.exists ? userDoc.data().name : 'Unknown User';
-      }));
-      appointmentsSummary.innerHTML = '';
-      if (futureSwaps.length === 0) {
-        appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
-      } else {
-        const list = document.createElement('ul');
-        futureSwaps.forEach(doc => {
-          const data = doc.data();
-          const otherUserId = data.from === userId ? data.to : data.from;
-          const otherUserName = userProfiles[otherUserId] || 'Unknown User';
-          const desc = data.description || 'No description';
-          const date = data.date || 'No date';
-          const time = data.time || (data.startTime && data.endTime ? `${data.startTime} - ${data.endTime}` : '');
-          const li = document.createElement('li');
-          li.textContent = `${date} ${time} — With ${otherUserName}: ${desc}`;
-          list.appendChild(li);
-        });
-        appointmentsSummary.appendChild(list);
-      }
-    });
   });
 </script>
 </body>
 </html>
+
 
 
 
