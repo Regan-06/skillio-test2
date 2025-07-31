@@ -544,6 +544,13 @@
         const time = app.startTime && app.endTime ? `${app.startTime} - ${app.endTime}` : '';
         const desc = app.description || 'No description';
         
+        // Determine if user is paying or receiving
+        const isPaying = app.from === currentUser.uid;
+        const paymentDirection = app.paymentAmount ? 
+          `<span style="display: flex; align-items: center; gap: 4px; white-space: nowrap; color: ${isPaying ? '#dc3545' : '#28a745'}; font-weight: 600;">
+            ${isPaying ? '💰 Paying' : '💸 Receiving'}
+          </span>` : '';
+        
         const appointmentCard = document.createElement('div');
         appointmentCard.style.cssText = `
           background: white;
@@ -641,6 +648,7 @@
                     💰 $${app.paymentAmount}
                   </span>
                 ` : ''}
+                ${paymentDirection}
               </div>
             </div>
           </div>
