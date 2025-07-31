@@ -379,6 +379,49 @@
     });
   }
 
+  // Add real-time listeners for automatic updates
+  function setupCalendarRealTimeListeners(userId) {
+    console.log('Setting up real-time listeners for calendar user:', userId);
+    
+    // Listen for changes to swaps collection
+    const swapsListener = db.collection("swaps")
+      .where("from", "==", userId)
+      .onSnapshot(snapshot => {
+        console.log('Swaps updated, refreshing calendar...');
+        // Refresh the calendar data
+        loadAppointments(userId);
+      }, error => {
+        console.error('Error in calendar swaps listener:', error);
+      });
+
+    // Also listen for swaps where user is the recipient
+    const swapsToListener = db.collection("swaps")
+      .where("to", "==", userId)
+      .onSnapshot(snapshot => {
+        console.log('Swaps (to) updated, refreshing calendar...');
+        // Refresh the calendar data
+        loadAppointments(userId);
+      }, error => {
+        console.error('Error in calendar swaps (to) listener:', error);
+      });
+
+    // Store listeners for cleanup
+    window.calendarSwapsListener = swapsListener;
+    window.calendarSwapsToListener = swapsToListener;
+  }
+
+  // Cleanup function for calendar listeners
+  function cleanupCalendarListeners() {
+    if (window.calendarSwapsListener) {
+      window.calendarSwapsListener();
+      window.calendarSwapsListener = null;
+    }
+    if (window.calendarSwapsToListener) {
+      window.calendarSwapsToListener();
+      window.calendarSwapsToListener = null;
+    }
+  }
+
   // Appointments summary (above calendar)
   const appointmentsSummary = document.getElementById('appointmentsSummary');
   appointmentsSummary.innerHTML = 'Loading...';
@@ -405,8 +448,12 @@
         // Check if it's a future date
         if (swapDate && swapDate >= todayISO) {
           // For old swaps (no status field), treat as accepted
-          // For new swaps, only include if status is 'accepted'
-          if (!data.status || data.status === 'accepted') {
+          // For new swaps, only include if status is 'accepted' or 'pending_payment' with paid status
+          const swapStatus = data.status;
+          const paymentStatus = data.paymentStatus;
+          
+          if (!swapStatus || swapStatus === 'accepted' || 
+              (swapStatus === 'pending_payment' && paymentStatus === 'paid')) {
             // Get the other user's name
             const otherUserId = data.from === currentUser.uid ? data.to : data.from;
             const otherUserDoc = await db.collection("users").doc(otherUserId).get();
@@ -610,6 +657,11 @@
 
   auth.onAuthStateChanged(user => {
     if (!user) return location.href = "auth.html";
+    
+    // Setup real-time listeners
+    setupCalendarRealTimeListeners(user.uid);
+    
+    // Load initial data
     loadAppointments(user.uid);
   });
 
