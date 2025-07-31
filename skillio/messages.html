@@ -805,15 +805,47 @@
       document.body.appendChild(modal);
     }
 
+    // Function to refresh dashboard and calendar
+    function refreshDashboardAndCalendar() {
+      // Refresh dashboard if it's open
+      if (window.location.pathname.includes('dashboard.html')) {
+        console.log('Refreshing dashboard...');
+        // Trigger dashboard refresh by reloading the page or calling the load function
+        if (typeof loadDashboardData === 'function') {
+          loadDashboardData();
+        } else {
+          window.location.reload();
+        }
+      }
+      
+      // Refresh calendar if it's open
+      if (window.location.pathname.includes('calendar.html')) {
+        console.log('Refreshing calendar...');
+        // Trigger calendar refresh by reloading the page or calling the load function
+        if (typeof loadAppointments === 'function') {
+          const currentUser = firebase.auth().currentUser;
+          if (currentUser) {
+            loadAppointments(currentUser.uid);
+          }
+        } else {
+          window.location.reload();
+        }
+      }
+    }
+
     // Simulate successful payment
     async function simulatePaymentSuccess(swapId, amount, targetUserId, targetUserName) {
       try {
+        console.log('Processing payment success for swap:', swapId);
+        
         // Update swap with payment success
         await db.collection("swaps").doc(swapId).update({
           paymentStatus: 'paid',
           paymentProcessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           mockPayment: true // Flag to identify mock payments
         });
+
+        console.log('Swap payment status updated to paid');
 
         // Send payment confirmation message
         const currentUser = firebase.auth().currentUser;
@@ -842,8 +874,13 @@
           read: false
         });
 
+        console.log('Payment confirmation messages sent');
+
         closeModal();
         alert(`Payment of $${amount} processed successfully! The swap is now active and payment is held in escrow.`);
+        
+        // Refresh dashboard and calendar
+        refreshDashboardAndCalendar();
         
       } catch (error) {
         console.error('Error processing payment:', error);
@@ -1165,6 +1202,8 @@
     // Function to manually simulate payment release (for testing)
     async function simulatePaymentRelease(swapId) {
       try {
+        console.log('Manually releasing payment for swap:', swapId);
+        
         const swapDoc = await db.collection("swaps").doc(swapId).get();
         if (!swapDoc.exists) {
           alert('Swap not found.');
@@ -1178,6 +1217,8 @@
           paymentStatus: 'released',
           manuallyReleasedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+
+        console.log('Payment status updated to released');
 
         // Send notification to both users
         await Promise.all([
@@ -1203,7 +1244,12 @@
           })
         ]);
 
+        console.log('Payment release notifications sent');
+
         alert(`Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`);
+        
+        // Refresh dashboard and calendar
+        refreshDashboardAndCalendar();
         
       } catch (error) {
         console.error('Error manually releasing payment:', error);
