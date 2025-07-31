@@ -544,6 +544,8 @@
     function openSwapModal(targetUserId, targetUserName) {
       const modal = document.createElement('div');
       modal.className = 'modal';
+      modal.style.display = 'block';
+      
       modal.innerHTML = `
         <div class="modal-content">
           <div class="modal-header">
@@ -552,47 +554,53 @@
           <div class="modal-body">
             <form id="swapForm">
               <div class="form-group">
-                <label for="swapDate">Date</label>
-                <div class="calendar-picker">
-                  <input type="text" id="swapDate" class="calendar-input" readonly placeholder="Select a date" required onclick="openCalendar()">
-                  <div class="calendar-dropdown" id="calendarDropdown">
-                    <div class="calendar-header">
-                      <button class="calendar-nav" onclick="previousMonth()">&lt;</button>
-                      <span class="calendar-title" id="calendarTitle">January 2025</span>
-                      <button class="calendar-nav" onclick="nextMonth()">&gt;</button>
-                    </div>
-                    <div class="calendar-grid" id="calendarGrid">
-                      <!-- Calendar will be generated here -->
-                    </div>
-                  </div>
-                </div>
+                <label for="swapDate">Date:</label>
+                <input type="date" id="swapDate" required>
               </div>
               <div class="form-group">
-                <label for="swapStartTime">Start Time</label>
+                <label for="swapStartTime">Start Time:</label>
                 <input type="time" id="swapStartTime" required>
               </div>
               <div class="form-group">
-                <label for="swapEndTime">End Time</label>
+                <label for="swapEndTime">End Time:</label>
                 <input type="time" id="swapEndTime" required>
               </div>
               <div class="form-group">
-                <label for="swapLocation">Location (optional)</label>
-                <input type="text" id="swapLocation" placeholder="Where will you meet?">
+                <label for="swapLocation">Location:</label>
+                <input type="text" id="swapLocation" placeholder="Where will this swap take place?">
               </div>
               <div class="form-group">
-                <label for="swapDescription">Description</label>
-                <textarea id="swapDescription" placeholder="What will you be swapping? (e.g., I'll teach you guitar, you'll help me with cooking)"></textarea>
+                <label for="swapDescription">Description:</label>
+                <textarea id="swapDescription" placeholder="What skills will be exchanged?"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="paymentAmount">Payment Amount ($):</label>
+                <input type="number" id="paymentAmount" min="0" step="0.01" placeholder="0.00" required>
+              </div>
+              <div class="form-group">
+                <label for="paymentMethod">Payment Method:</label>
+                <select id="paymentMethod" required>
+                  <option value="">Select payment method</option>
+                  <option value="stripe">Credit/Debit Card</option>
+                  <option value="paypal">PayPal</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="paymentTerms" required>
+                  I agree to pay the specified amount upfront. Payment will be held until both parties confirm completion or 48 hours pass.
+                </label>
               </div>
             </form>
           </div>
           <div class="modal-footer">
             <button class="btn btn-cancel" onclick="closeSwapModal()">Cancel</button>
-            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Create Swap</button>
+            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Create Swap & Pay</button>
           </div>
         </div>
       `;
+      
       document.body.appendChild(modal);
-      modal.style.display = 'block';
       
       // Set default date to tomorrow
       const tomorrow = new Date();
@@ -627,14 +635,22 @@
       const endTime = document.getElementById('swapEndTime').value;
       const location = document.getElementById('swapLocation').value;
       const description = document.getElementById('swapDescription').value;
+      const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const paymentTerms = document.getElementById('paymentTerms').checked;
 
-      if (!date || !startTime || !endTime) {
+      if (!date || !startTime || !endTime || !paymentAmount || !paymentMethod || !paymentTerms) {
         alert('Please fill in all required fields.');
         return;
       }
 
       if (startTime >= endTime) {
         alert('End time must be after start time.');
+        return;
+      }
+
+      if (paymentAmount < 0) {
+        alert('Payment amount must be positive.');
         return;
       }
 
@@ -654,7 +670,7 @@
           (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + targetUserId.substring(0, 8)) : 
           'User ' + targetUserId.substring(0, 8);
 
-        // Create the swap with pending status
+        // Create the swap with payment information
         const swapRef = await db.collection("swaps").add({
           from: currentUser.uid,
           to: targetUserId,
@@ -665,8 +681,14 @@
           endTime: endTime,
           location: location || '',
           description: description || 'Swap session',
-          status: 'pending', // New: pending status
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          paymentAmount: paymentAmount,
+          paymentMethod: paymentMethod,
+          paymentStatus: 'pending', // 'pending', 'paid', 'released', 'refunded'
+          escrowId: `escrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          status: 'pending_payment', // 'pending_payment', 'paid', 'completed', 'cancelled'
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          paymentDue: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          autoReleaseTime: new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours from now
         });
 
         // Send a notification message to the recipient
@@ -675,15 +697,25 @@
           to: targetUserId,
           fromName: fromUserName,
           toName: toUserName,
-          text: `You have a pending swap request for ${date} at ${startTime}. Click here to view and respond.`,
+          text: `You have a pending swap request for ${date} at ${startTime}. Payment amount: $${paymentAmount}. Click here to view and respond.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'swap_request', // New: message type
-          swapId: swapRef.id, // Reference to the swap
+          type: 'swap_request',
+          swapId: swapRef.id,
+          paymentAmount: paymentAmount,
           read: false
         });
 
         closeSwapModal();
-        alert('Swap request sent! The other user will be notified and can accept or decline.');
+        
+        // Simulate payment processing (replace with actual Stripe/PayPal integration)
+        alert(`Swap request sent! Payment of $${paymentAmount} will be processed. The other user will be notified and can accept or decline.`);
+        
+        // In a real implementation, you would:
+        // 1. Redirect to Stripe/PayPal payment page
+        // 2. Process payment and hold in escrow
+        // 3. Update paymentStatus to 'paid' when payment succeeds
+        // 4. Send confirmation to both users
+        
       } catch (error) {
         console.error('Error creating swap:', error);
         alert('Error creating swap. Please try again.');
@@ -769,10 +801,11 @@
       messageDiv.style.border = '1px solid #e9ecef';
 
       const swapData = message.swapData;
+      const paymentAmount = message.paymentAmount || swapData?.paymentAmount || 0;
       
       messageDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
-          <strong>Swap Request</strong>
+          <strong>Swap Request - $${paymentAmount}</strong>
           <span style="float: right; color: #666; font-size: 12px;">
             ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
           </span>
@@ -781,9 +814,14 @@
           <strong>Date:</strong> ${swapData?.date || 'Loading...'}<br>
           <strong>Time:</strong> ${swapData?.startTime || ''} - ${swapData?.endTime || ''}<br>
           <strong>Location:</strong> ${swapData?.location || 'Not specified'}<br>
-          <strong>Description:</strong> ${swapData?.description || 'No description'}
+          <strong>Description:</strong> ${swapData?.description || 'No description'}<br>
+          <strong>Payment:</strong> $${paymentAmount} (held in escrow)
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div style="margin-bottom: 10px; font-size: 12px; color: #666;">
+          <strong>Payment Status:</strong> ${swapData?.paymentStatus || 'pending'}<br>
+          <strong>Auto-release:</strong> ${swapData?.autoReleaseTime ? new Date(swapData.autoReleaseTime.toDate()).toLocaleString() : 'Not set'}
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button onclick="respondToSwap('${message.swapId}', 'accepted')" 
                   style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
             Accept
@@ -791,6 +829,10 @@
           <button onclick="respondToSwap('${message.swapId}', 'declined')" 
                   style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
             Decline
+          </button>
+          <button onclick="openDisputeForm('${message.swapId}', ${JSON.stringify(swapData)})" 
+                  style="background: #ffc107; color: #212529; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Dispute
           </button>
         </div>
       `;
@@ -822,6 +864,171 @@
 
       return messageDiv;
     }
+
+    // Function to open dispute form
+    function openDisputeForm(swapId, swapData) {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.style.display = 'block';
+      
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            Dispute Form - Swap #${swapId.substring(0, 8)}
+          </div>
+          <div class="modal-body">
+            <form id="disputeForm">
+              <div class="form-group">
+                <label for="disputeReason">Reason for Dispute:</label>
+                <select id="disputeReason" required>
+                  <option value="">Select a reason</option>
+                  <option value="no_show">Other party didn't show up</option>
+                  <option value="poor_service">Poor quality service</option>
+                  <option value="wrong_service">Wrong service provided</option>
+                  <option value="safety_concern">Safety concern</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="disputeDescription">Detailed Description:</label>
+                <textarea id="disputeDescription" placeholder="Please describe what happened..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="disputeEvidence">Evidence (optional):</label>
+                <input type="file" id="disputeEvidence" accept="image/*,.pdf,.doc,.docx">
+                <small>Upload screenshots, photos, or documents to support your claim</small>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disputeTerms" required>
+                  I confirm that the information provided is accurate and I understand this dispute will be reviewed by Skillio support.
+                </label>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-cancel" onclick="closeDisputeModal()">Cancel</button>
+            <button class="btn btn-create" onclick="submitDispute('${swapId}')">Submit Dispute</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    function closeDisputeModal() {
+      const modal = document.querySelector('.modal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+
+    async function submitDispute(swapId) {
+      const reason = document.getElementById('disputeReason').value;
+      const description = document.getElementById('disputeDescription').value;
+      const evidence = document.getElementById('disputeEvidence').files[0];
+      const terms = document.getElementById('disputeTerms').checked;
+
+      if (!reason || !description || !terms) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      try {
+        const currentUser = firebase.auth().currentUser;
+        
+        // Create dispute record
+        await db.collection("disputes").add({
+          swapId: swapId,
+          userId: currentUser.uid,
+          reason: reason,
+          description: description,
+          evidenceFile: evidence ? evidence.name : null,
+          status: 'pending', // 'pending', 'approved', 'rejected'
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Update swap status
+        await db.collection("swaps").doc(swapId).update({
+          status: 'disputed',
+          disputeSubmittedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Send notification message
+        await db.collection("messages").add({
+          from: currentUser.uid,
+          to: 'admin', // This would be the admin user ID
+          fromName: currentUser.displayName || 'Unknown User',
+          toName: 'Skillio Support',
+          text: `Dispute submitted for swap #${swapId.substring(0, 8)}. Reason: ${reason}`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'dispute_notification',
+          swapId: swapId,
+          read: false
+        });
+
+        closeDisputeModal();
+        alert('Dispute submitted successfully. Our support team will review your case within 24-48 hours.');
+        
+      } catch (error) {
+        console.error('Error submitting dispute:', error);
+        alert('Error submitting dispute. Please try again.');
+      }
+    }
+
+    // Function to check and auto-release payments
+    async function checkPaymentAutoRelease() {
+      const currentTime = new Date();
+      
+      try {
+        const swapsSnapshot = await db.collection("swaps")
+          .where("paymentStatus", "==", "paid")
+          .where("status", "==", "completed")
+          .get();
+
+        for (const doc of swapsSnapshot.docs) {
+          const swapData = doc.data();
+          const autoReleaseTime = swapData.autoReleaseTime?.toDate();
+          
+          if (autoReleaseTime && currentTime > autoReleaseTime) {
+            // Auto-release payment after 48 hours
+            await db.collection("swaps").doc(doc.id).update({
+              paymentStatus: 'released',
+              autoReleasedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Send notification to both users
+            await Promise.all([
+              db.collection("messages").add({
+                from: 'system',
+                to: swapData.from,
+                fromName: 'Skillio System',
+                toName: swapData.fromName,
+                text: `Payment of $${swapData.paymentAmount} has been automatically released for swap #${doc.id.substring(0, 8)}.`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'payment_released',
+                read: false
+              }),
+              db.collection("messages").add({
+                from: 'system',
+                to: swapData.to,
+                fromName: 'Skillio System',
+                toName: swapData.toName,
+                text: `Payment of $${swapData.paymentAmount} has been automatically released for swap #${doc.id.substring(0, 8)}.`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'payment_released',
+                read: false
+              })
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking payment auto-release:', error);
+      }
+    }
+
+    // Run payment auto-release check every hour
+    setInterval(checkPaymentAutoRelease, 60 * 60 * 1000);
 
     // Modify the loadMessages function to handle swap messages
     async function loadMessages(targetUserId) {
@@ -966,6 +1173,7 @@
   </script>
 </body>
 </html>
+
 
 
 
