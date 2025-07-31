@@ -318,15 +318,18 @@
         // Open direct conversation with target user
         conversationList.innerHTML = '<p>Loading conversation...</p>';
         // Fetch target user's name and profilePic
-        let userName = 'Unknown User';
+        let userName = 'User ' + targetUserId.substring(0, 8);
         let userProfilePic = '';
         try {
           const userDoc = await db.collection('users').doc(targetUserId).get();
           if (userDoc.exists) {
-            userName = userDoc.data().name || 'Unknown User';
-            userProfilePic = userDoc.data().profilePic || '';
+            const userData = userDoc.data();
+            userName = userData.displayName || userData.name || 'User ' + targetUserId.substring(0, 8);
+            userProfilePic = userData.profilePic || '';
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('Error fetching user data:', e);
+        }
         // Fetch all messages between currentUserId and targetUserId
         const allMsgsSnap = await db.collection("messages").orderBy("timestamp").get();
         const msgs = allMsgsSnap.docs.map(doc => ({...doc.data(), id: doc.id})).filter(m =>
@@ -365,15 +368,18 @@
         }
         conversationList.innerHTML = "";
         userIds.forEach(async userId => {
-          let userName = "Unknown User";
+          let userName = 'User ' + userId.substring(0, 8);
           let profilePic = '';
           try {
             const userDoc = await db.collection('users').doc(userId).get();
             if (userDoc.exists) {
-              userName = userDoc.data().name || 'Unknown User';
-              profilePic = userDoc.data().profilePic || '';
+              const userData = userDoc.data();
+              userName = userData.displayName || userData.name || 'User ' + userId.substring(0, 8);
+              profilePic = userData.profilePic || '';
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error('Error fetching user data for conversation list:', e);
+          }
           const convo = document.createElement("div");
           convo.className = "conversation";
           convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
@@ -853,7 +859,7 @@
           from: 'system',
           to: currentUser.uid,
           fromName: 'Skillio Payment System',
-          toName: currentUser.displayName || 'Unknown User',
+          toName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
           text: `Payment of $${amount} processed successfully for swap #${swapId.substring(0, 8)}. Payment is held in escrow until swap completion.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           type: 'payment_confirmation',
@@ -950,7 +956,7 @@
         await db.collection("messages").add({
           from: currentUser.uid,
           to: swapData.from,
-          fromName: currentUser.displayName || 'Unknown User',
+          fromName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
           toName: swapData.fromName,
           text: `Your swap request for ${swapData.date} has been ${response}.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1181,7 +1187,7 @@
         await db.collection("messages").add({
           from: currentUser.uid,
           to: 'admin', // This would be the admin user ID
-          fromName: currentUser.displayName || 'Unknown User',
+          fromName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
           toName: 'Skillio Support',
           text: `Dispute submitted for swap #${swapId.substring(0, 8)}. Reason: ${reason}`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1321,14 +1327,20 @@
         const currentUser = firebase.auth().currentUser;
         const currentUserId = currentUser.uid;
 
-        // Get user names
+        // Get user names with better fallback logic
         const [currentUserDoc, targetUserDoc] = await Promise.all([
           db.collection("users").doc(currentUserId).get(),
           db.collection("users").doc(targetUserId).get()
         ]);
-
-        const currentUserName = currentUserDoc.data()?.displayName || 'Unknown User';
-        const targetUserName = targetUserDoc.data()?.displayName || 'Unknown User';
+        
+        const currentUserName = currentUserDoc.data()?.displayName || 
+                               currentUserDoc.data()?.name || 
+                               currentUser.email || 
+                               'User ' + currentUserId.substring(0, 8);
+        
+        const targetUserName = targetUserDoc.data()?.displayName || 
+                              targetUserDoc.data()?.name || 
+                              'User ' + targetUserId.substring(0, 8);
 
         // Get all messages and filter client-side (Firestore doesn't support complex queries well)
         const messagesSnapshot = await db.collection("messages")
