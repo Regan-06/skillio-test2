@@ -334,6 +334,44 @@
       console.log(`Updated ${updatedCount} messages with read field`);
     }
 
+    // Function to clean up duplicate bookmarks
+    async function cleanupDuplicateBookmarks(userId) {
+      try {
+        console.log('Cleaning up duplicate bookmarks for user:', userId);
+        
+        const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
+        const seenUserIds = new Set();
+        const duplicatesToDelete = [];
+        
+        for (const bookmarkDoc of bookmarksSnap.docs) {
+          const bookmarkedUserId = bookmarkDoc.id;
+          
+          if (seenUserIds.has(bookmarkedUserId)) {
+            // This is a duplicate, mark for deletion
+            duplicatesToDelete.push(bookmarkDoc.ref);
+            console.log('Found duplicate bookmark for user:', bookmarkedUserId);
+          } else {
+            seenUserIds.add(bookmarkedUserId);
+          }
+        }
+        
+        // Delete all duplicates
+        if (duplicatesToDelete.length > 0) {
+          const batch = db.batch();
+          duplicatesToDelete.forEach(ref => {
+            batch.delete(ref);
+          });
+          await batch.commit();
+          console.log(`Deleted ${duplicatesToDelete.length} duplicate bookmarks`);
+        } else {
+          console.log('No duplicate bookmarks found');
+        }
+        
+      } catch (error) {
+        console.error('Error cleaning up duplicate bookmarks:', error);
+      }
+    }
+
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
       .then(() => {
         firebase.auth().onAuthStateChanged(user => {
@@ -343,6 +381,7 @@
             console.log("User is signed in as:", user.email);
             initializeMessageReadFields(); // Initialize existing messages
             checkUnreadMessages();
+            cleanupDuplicateBookmarks(user.uid); // Clean up duplicates on page load
           }
         });
       })
@@ -422,6 +461,19 @@
       });
     }
 
+    // Debounce function to prevent rapid clicking
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
     function toggleBookmark(event, userId, userName, skillOffered) {
       const currentUser = firebase.auth().currentUser;
       if (!currentUser) {
@@ -430,7 +482,6 @@
       }
       
       const bookmarkBtn = event.target;
-      const ref = db.collection('users').doc(currentUser.uid).collection('bookmarks').doc(userId);
       
       // Prevent multiple rapid clicks
       if (bookmarkBtn.disabled) {
@@ -438,37 +489,37 @@
       }
       bookmarkBtn.disabled = true;
       
+      // Use a more robust approach with proper error handling
+      const ref = db.collection('users').doc(currentUser.uid).collection('bookmarks').doc(userId);
+      
       ref.get().then(doc => {
         if (doc.exists) {
           // Remove bookmark
-          ref.delete().then(() => {
+          return ref.delete().then(() => {
             bookmarkBtn.textContent = '☆';
             alert(`Removed ${userName} from bookmarks`);
-            bookmarkBtn.disabled = false;
-          }).catch(error => {
-            console.error('Error removing bookmark:', error);
-            alert('Error removing bookmark. Please try again.');
-            bookmarkBtn.disabled = false;
+            console.log('Bookmark removed for user:', userId);
           });
         } else {
           // Add bookmark - use set with merge to prevent duplicates
-          ref.set({
+          return ref.set({
             userName: userName,
             skillOffered: skillOffered,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true }).then(() => {
             bookmarkBtn.textContent = '★';
             alert(`Bookmarked ${userName} (${skillOffered})`);
-            bookmarkBtn.disabled = false;
-          }).catch(error => {
-            console.error('Error adding bookmark:', error);
-            alert('Error adding bookmark. Please try again.');
-            bookmarkBtn.disabled = false;
+            console.log('Bookmark added for user:', userId);
           });
         }
+      }).then(() => {
+        // Success - re-enable button after a short delay
+        setTimeout(() => {
+          bookmarkBtn.disabled = false;
+        }, 500); // 500ms delay to prevent rapid clicking
       }).catch(error => {
-        console.error('Error checking bookmark status:', error);
-        alert('Error checking bookmark status. Please try again.');
+        console.error('Error in bookmark operation:', error);
+        alert('Error updating bookmark. Please try again.');
         bookmarkBtn.disabled = false;
       });
     }
@@ -495,7 +546,6 @@
   </script>
 </body>
 </html>
-
 
 
 
