@@ -190,8 +190,9 @@
     .grow {
       display: inline-block;
       animation: growText 1s ease-in-out forwards;
-      animation-delay: 2.5s;
+      animation-delay: 3s;
       opacity: 0;
+      margin-top: 10px;
     }
 
     @keyframes growText {
@@ -206,12 +207,19 @@
       border-right: 3px solid white;
       animation-fill-mode: forwards;
       display: inline-block;
-      animation: typing 2.5s steps(30, end);
+      animation: typing 2.5s steps(11, end);
     }
 
     @keyframes typing {
       from { width: 0 }
-      to { width: 30ch }
+      to { width: 11ch }
+    }
+
+    .slogan-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     @media (max-width: 768px) {
@@ -262,7 +270,10 @@
 <body>
   <header>
     <img src="skillio/skillio logo.png" alt="Skillio Logo" class="logo-flip" />
-    <p><span class="slogan type">Swap Skills</span> <span class="grow">Grow Together!</span></p>
+    <div class="slogan-container">
+      <span class="slogan type">Swap Skills</span>
+      <span class="grow">Grow Together!</span>
+    </div>
   </header>
 
   <section class="features">
