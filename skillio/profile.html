@@ -313,14 +313,34 @@
           }
           updateBookmarkBtn();
           bookmarkBtn.onclick = async () => {
-            const ref = db.collection('users').doc(currentUid).collection('bookmarks').doc(profileUid);
-            const doc = await ref.get();
-            if (doc.exists) {
-              await ref.delete();
-            } else {
-              await ref.set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            // Prevent multiple rapid clicks
+            if (bookmarkBtn.disabled) {
+              return;
             }
-            updateBookmarkBtn();
+            bookmarkBtn.disabled = true;
+            
+            try {
+              const ref = db.collection('users').doc(currentUid).collection('bookmarks').doc(profileUid);
+              const doc = await ref.get();
+              
+              if (doc.exists) {
+                await ref.delete();
+                console.log('Bookmark removed for user:', profileUid);
+              } else {
+                // Use set with merge to prevent duplicates
+                await ref.set({ 
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+                }, { merge: true });
+                console.log('Bookmark added for user:', profileUid);
+              }
+              
+              updateBookmarkBtn();
+            } catch (error) {
+              console.error('Error toggling bookmark:', error);
+              alert('Error updating bookmark. Please try again.');
+            } finally {
+              bookmarkBtn.disabled = false;
+            }
           };
           db.collection('users').doc(profileUid).collection('followers').onSnapshot(snap => {
             followerCount.textContent = `Followers: ${snap.size}`;
