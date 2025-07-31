@@ -421,19 +421,161 @@
       console.error("Error fetching appointments:", e);
     }
     appointmentsSummary.innerHTML = '';
+    console.log('Creating appointments display for', appointments.length, 'appointments');
     if (appointments.length === 0) {
-      appointmentsSummary.innerHTML = '<p>No upcoming appointments.</p>';
+      console.log('Showing empty state');
+      appointmentsSummary.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #dee2e6;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+          <h3 style="color: #6c757d; margin: 0 0 8px 0; font-weight: 600;">No Upcoming Appointments</h3>
+          <p style="color: #868e96; margin: 0; font-size: 14px;">Your calendar is clear! Time to schedule some skill swaps.</p>
+        </div>
+      `;
     } else {
-      const list = document.createElement('ul');
-      appointments.forEach(app => {
+      console.log('Creating beautiful appointment cards');
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        max-width: 100%;
+      `;
+      
+      const header = document.createElement('div');
+      header.style.cssText = `
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e9ecef;
+        flex-wrap: wrap;
+        gap: 12px;
+      `;
+      header.innerHTML = `
+        <div style="font-size: 24px; margin-right: 12px;">📋</div>
+        <h3 style="margin: 0; color: #495057; font-weight: 600;">Upcoming Appointments</h3>
+        <div style="margin-left: auto; background: #00bcd4; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+          ${appointments.length} ${appointments.length === 1 ? 'appointment' : 'appointments'}
+        </div>
+      `;
+      container.appendChild(header);
+      
+      // Create grid container for responsive layout
+      const gridContainer = document.createElement('div');
+      gridContainer.style.cssText = `
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        width: 100%;
+      `;
+      
+      // Add responsive grid for larger screens
+      if (window.innerWidth > 768) {
+        console.log('Using PC layout - multi-column grid');
+        gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+        gridContainer.style.gap = '20px';
+      } else {
+        console.log('Using mobile layout - single column');
+      }
+      
+      appointments.forEach((app, index) => {
+        console.log('Creating card for appointment', index + 1, app);
         const date = app.date || 'No date';
         const time = app.startTime && app.endTime ? `${app.startTime} - ${app.endTime}` : '';
         const desc = app.description || 'No description';
-        const li = document.createElement('li');
-        li.textContent = `${date} ${time} — With ${app.otherUserName}: ${desc}`;
-        list.appendChild(li);
+        
+        const appointmentCard = document.createElement('div');
+        appointmentCard.style.cssText = `
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #e9ecef;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          transition: transform 0.2s, box-shadow 0.2s;
+          cursor: pointer;
+          width: 100%;
+          box-sizing: border-box;
+        `;
+        
+        // Responsive padding for different screen sizes
+        if (window.innerWidth > 768) {
+          appointmentCard.style.padding = '24px';
+        }
+        
+        appointmentCard.onmouseover = () => {
+          appointmentCard.style.transform = 'translateY(-2px)';
+          appointmentCard.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
+        };
+        appointmentCard.onmouseout = () => {
+          appointmentCard.style.transform = 'translateY(0)';
+          appointmentCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+        };
+        
+        // Responsive layout for card content
+        const isMobile = window.innerWidth <= 768;
+        
+        appointmentCard.innerHTML = `
+          <div style="display: flex; align-items: flex-start; gap: ${isMobile ? '12px' : '16px'};">
+            <div style="
+              background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+              color: white;
+              width: ${isMobile ? '40px' : '48px'};
+              height: ${isMobile ? '40px' : '48px'};
+              border-radius: ${isMobile ? '10px' : '12px'};
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: ${isMobile ? '16px' : '20px'};
+              font-weight: bold;
+              flex-shrink: 0;
+            ">
+              ${new Date(date).getDate()}
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <h4 style="margin: 0; color: #212529; font-weight: 600; font-size: ${isMobile ? '14px' : '16px'};">
+                  ${app.otherUserName}
+                </h4>
+                <div style="
+                  background: #28a745;
+                  color: white;
+                  padding: 4px 8px;
+                  border-radius: 12px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  white-space: nowrap;
+                ">
+                  Confirmed
+                </div>
+              </div>
+              <p style="margin: 0 0 8px 0; color: #6c757d; font-size: ${isMobile ? '13px' : '14px'}; line-height: 1.4; word-wrap: break-word;">
+                ${desc}
+              </p>
+              <div style="display: flex; align-items: center; gap: ${isMobile ? '12px' : '16px'}; font-size: ${isMobile ? '11px' : '12px'}; color: #868e96; flex-wrap: wrap;">
+                <span style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                  📅 ${new Date(date).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </span>
+                <span style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                  ⏰ ${time}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        gridContainer.appendChild(appointmentCard);
       });
-      appointmentsSummary.appendChild(list);
+      
+      container.appendChild(gridContainer);
+      appointmentsSummary.appendChild(container);
+      console.log('Appointments display created successfully');
     }
   });
 
