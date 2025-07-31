@@ -561,6 +561,19 @@
                 ">
                   CONFIRMED
                 </div>
+                ${app.paymentAmount ? `
+                  <div style="
+                    background: #ffc107;
+                    color: #212529;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 600;
+                    white-space: nowrap;
+                  ">
+                    $${app.paymentAmount}
+                  </div>
+                ` : ''}
               </div>
               <p style="margin: 0 0 8px 0; color: #6c757d; font-size: ${isMobile ? '13px' : '14px'}; line-height: 1.4; word-wrap: break-word;">
                 ${desc}
@@ -576,6 +589,11 @@
                 <span style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
                   ⏰ ${time}
                 </span>
+                ${app.paymentAmount ? `
+                  <span style="display: flex; align-items: center; gap: 4px; white-space: nowrap; color: #00bcd4; font-weight: 600;">
+                    💰 $${app.paymentAmount}
+                  </span>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -600,5 +618,4 @@
   </script>
 </body>
 </html>
-
 
