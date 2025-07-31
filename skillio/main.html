@@ -432,24 +432,44 @@
       const bookmarkBtn = event.target;
       const ref = db.collection('users').doc(currentUser.uid).collection('bookmarks').doc(userId);
       
+      // Prevent multiple rapid clicks
+      if (bookmarkBtn.disabled) {
+        return;
+      }
+      bookmarkBtn.disabled = true;
+      
       ref.get().then(doc => {
         if (doc.exists) {
           // Remove bookmark
           ref.delete().then(() => {
             bookmarkBtn.textContent = '☆';
             alert(`Removed ${userName} from bookmarks`);
+            bookmarkBtn.disabled = false;
+          }).catch(error => {
+            console.error('Error removing bookmark:', error);
+            alert('Error removing bookmark. Please try again.');
+            bookmarkBtn.disabled = false;
           });
         } else {
-          // Add bookmark
+          // Add bookmark - use set with merge to prevent duplicates
           ref.set({
             userName: userName,
             skillOffered: skillOffered,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
+          }, { merge: true }).then(() => {
             bookmarkBtn.textContent = '★';
             alert(`Bookmarked ${userName} (${skillOffered})`);
+            bookmarkBtn.disabled = false;
+          }).catch(error => {
+            console.error('Error adding bookmark:', error);
+            alert('Error adding bookmark. Please try again.');
+            bookmarkBtn.disabled = false;
           });
         }
+      }).catch(error => {
+        console.error('Error checking bookmark status:', error);
+        alert('Error checking bookmark status. Please try again.');
+        bookmarkBtn.disabled = false;
       });
     }
 
