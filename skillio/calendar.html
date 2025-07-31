@@ -474,7 +474,7 @@
       // Add responsive grid for larger screens
       if (window.innerWidth > 768) {
         console.log('Using PC layout - multi-column grid');
-        gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+        gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(350px, 1fr))';
         gridContainer.style.gap = '20px';
       } else {
         console.log('Using mobile layout - single column');
@@ -548,7 +548,7 @@
                   text-transform: uppercase;
                   white-space: nowrap;
                 ">
-                  Confirmed
+                  CONFIRMED
                 </div>
               </div>
               <p style="margin: 0 0 8px 0; color: #6c757d; font-size: ${isMobile ? '13px' : '14px'}; line-height: 1.4; word-wrap: break-word;">
