@@ -744,8 +744,6 @@
         closeSwapModal();
         
         // Mock payment processing (replace with actual Stripe/PayPal integration)
-        const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
-        
         // Show payment processing modal
         showPaymentProcessingModal(paymentAmount, swapRef.id, targetUserId, targetUserName);
         
