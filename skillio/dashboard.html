@@ -317,11 +317,18 @@
         const paymentInfo = appointment.paymentAmount ? 
           `<br><small style="color: #00bcd4; font-weight: bold;">Payment: $${appointment.paymentAmount}</small>` : '';
         
+        // Determine if user is paying or receiving
+        const isPaying = appointment.from === userId;
+        const paymentDirection = appointment.paymentAmount ? 
+          `<br><small style="color: ${isPaying ? '#dc3545' : '#28a745'}; font-weight: bold;">
+            ${isPaying ? '💰 You are paying' : '💸 You are receiving'}
+          </small>` : '';
+        
         return `
           <li>
             <strong>${appointment.otherUserName}</strong><br>
             <small>${appointment.description}</small><br>
-            <small>${appointment.date} at ${appointment.startTime}</small>${paymentInfo}
+            <small>${appointment.date} at ${appointment.startTime}</small>${paymentInfo}${paymentDirection}
           </li>
         `;
       }).join('');
@@ -397,6 +404,7 @@
 </script>
 </body>
 </html>
+
 
 
 
