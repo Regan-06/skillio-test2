@@ -362,25 +362,67 @@
     // 4. Bookmarked Users
     const bookmarkedUsers = document.getElementById('bookmarkedUsers');
     bookmarkedUsers.innerHTML = 'Loading...';
-    const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
-    if (bookmarksSnap.empty) {
-      bookmarkedUsers.innerHTML = '<li>No bookmarked users yet.</li>';
-    } else {
-      bookmarkedUsers.innerHTML = '';
-      for (const bookmarkDoc of bookmarksSnap.docs) {
-        const bookmarkedUserId = bookmarkDoc.id;
-        try {
-          const userDoc = await db.collection('users').doc(bookmarkedUserId).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="profile.html?user=${bookmarkedUserId}" style="color: #00bcd4; text-decoration: none;">${userData.name || 'Unknown User'}</a>`;
-            bookmarkedUsers.appendChild(li);
+    
+    try {
+      const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
+      
+      if (bookmarksSnap.empty) {
+        bookmarkedUsers.innerHTML = '<li>No bookmarked users yet.</li>';
+      } else {
+        bookmarkedUsers.innerHTML = '';
+        
+        // Use a Set to track unique user IDs and avoid duplicates
+        const uniqueUserIds = new Set();
+        const processedUsers = [];
+        
+        for (const bookmarkDoc of bookmarksSnap.docs) {
+          const bookmarkedUserId = bookmarkDoc.id;
+          
+          // Skip if we've already processed this user
+          if (uniqueUserIds.has(bookmarkedUserId)) {
+            console.log('Skipping duplicate bookmark for user:', bookmarkedUserId);
+            continue;
           }
-        } catch (e) {
-          // Skip if user doesn't exist
+          
+          uniqueUserIds.add(bookmarkedUserId);
+          
+          try {
+            const userDoc = await db.collection('users').doc(bookmarkedUserId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              const userName = userData.displayName || userData.name || 'Unknown User';
+              
+              processedUsers.push({
+                id: bookmarkedUserId,
+                name: userName
+              });
+            } else {
+              console.log('Bookmarked user no longer exists:', bookmarkedUserId);
+            }
+          } catch (e) {
+            console.error('Error fetching bookmarked user:', bookmarkedUserId, e);
+          }
         }
+        
+        // Sort users alphabetically by name
+        processedUsers.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Display unique bookmarked users
+        if (processedUsers.length === 0) {
+          bookmarkedUsers.innerHTML = '<li>No bookmarked users found.</li>';
+        } else {
+          processedUsers.forEach(user => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="profile.html?user=${user.id}" style="color: #00bcd4; text-decoration: none;">${user.name}</a>`;
+            bookmarkedUsers.appendChild(li);
+          });
+        }
+        
+        console.log(`Loaded ${processedUsers.length} unique bookmarked users`);
       }
+    } catch (e) {
+      console.error('Error loading bookmarked users:', e);
+      bookmarkedUsers.innerHTML = '<li>Error loading bookmarked users.</li>';
     }
 
     console.log('Dashboard data loaded successfully');
