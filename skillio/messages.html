@@ -310,97 +310,89 @@
     auth.onAuthStateChanged(async user => {
       if (!user) return (window.location.href = 'auth.html');
       const currentUserId = user.uid;
-      const currentUserName = user.displayName || "You";
       const conversationList = document.getElementById("conversationList");
       const targetUserId = getQueryParam('user');
 
       if (targetUserId && targetUserId !== currentUserId) {
         // Open direct conversation with target user
         conversationList.innerHTML = '<p>Loading conversation...</p>';
-        // Fetch target user's name and profilePic
-        let userName = 'User ' + targetUserId.substring(0, 8);
-        let userProfilePic = '';
-        try {
-          const userDoc = await db.collection('users').doc(targetUserId).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            userName = userData.displayName || userData.name || 'User ' + targetUserId.substring(0, 8);
-            userProfilePic = userData.profilePic || '';
-          }
-        } catch (e) {
-          console.error('Error fetching user data:', e);
-        }
-        // Fetch all messages between currentUserId and targetUserId
-        const allMsgsSnap = await db.collection("messages").orderBy("timestamp").get();
-        const msgs = allMsgsSnap.docs.map(doc => ({...doc.data(), id: doc.id})).filter(m =>
-          (m.from === currentUserId && m.to === targetUserId) || (m.from === targetUserId && m.to === currentUserId)
-        );
-        // Mark messages as read
-        markMessagesAsRead(msgs);
-        // Render conversation
-        let convoDiv = document.createElement('div');
-        convoDiv.className = 'conversation';
-        convoDiv.innerHTML = `<img src="${userProfilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><strong>Conversation with ${userName}</strong>`;
-        
-        // Use the new loadMessages function instead of old logic
-        conversationList.innerHTML = '';
-        conversationList.appendChild(convoDiv);
         
         // Create messages container for the new system
         const messagesContainer = document.createElement('div');
         messagesContainer.id = 'messages';
         messagesContainer.className = 'messages';
         messagesContainer.style.display = 'block';
+        conversationList.innerHTML = '';
         conversationList.appendChild(messagesContainer);
         
         // Load messages using the new system
         loadMessages(targetUserId);
       } else {
-        // ... existing logic to show all conversations ...
-        const sent = await db.collection("messages").where("from", "==", currentUserId).get();
-        const received = await db.collection("messages").where("to", "==", currentUserId).get();
-        const userIds = new Set();
-        sent.docs.forEach(doc => userIds.add(doc.data().to));
-        received.docs.forEach(doc => userIds.add(doc.data().from));
-        if (userIds.size === 0) {
-          conversationList.innerHTML = "<p>No conversations yet.</p>";
-          return;
-        }
-        conversationList.innerHTML = "";
-        userIds.forEach(async userId => {
-          let userName = 'User ' + userId.substring(0, 8);
-          let profilePic = '';
-          try {
-            const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              userName = userData.displayName || userData.name || 'User ' + userId.substring(0, 8);
-              profilePic = userData.profilePic || '';
-            }
-          } catch (e) {
-            console.error('Error fetching user data for conversation list:', e);
+        // Show all conversations
+        try {
+          const sent = await db.collection("messages").where("from", "==", currentUserId).get();
+          const received = await db.collection("messages").where("to", "==", currentUserId).get();
+          const userIds = new Set();
+          sent.docs.forEach(doc => userIds.add(doc.data().to));
+          received.docs.forEach(doc => userIds.add(doc.data().from));
+          
+          if (userIds.size === 0) {
+            conversationList.innerHTML = "<p>No conversations yet.</p>";
+            return;
           }
-          const convo = document.createElement("div");
-          convo.className = "conversation";
-          convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
-          convo.onclick = async () => {
-            // Use the new loadMessages function instead of old logic
-            msgDiv.innerHTML = "<p>Loading chat...</p>";
-            msgDiv.style.display = "block";
+          
+          conversationList.innerHTML = "";
+          
+          // Process each conversation
+          for (const userId of userIds) {
+            let userName = 'User ' + userId.substring(0, 8);
+            let profilePic = '';
             
-            // Clear existing content and use new system
-            msgDiv.innerHTML = '';
-            msgDiv.id = 'messages'; // Set the ID that loadMessages expects
+            try {
+              const userDoc = await db.collection('users').doc(userId).get();
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                userName = userData.displayName || userData.name || 'User ' + userId.substring(0, 8);
+                profilePic = userData.profilePic || '';
+              }
+            } catch (e) {
+              console.error('Error fetching user data for conversation list:', e);
+            }
             
-            // Load messages using the new system
-            loadMessages(userId);
-          };
-          const msgDiv = document.createElement("div");
-          msgDiv.className = "messages";
-          msgDiv.style.display = "none";
-          conversationList.appendChild(convo);
-          conversationList.appendChild(msgDiv);
-        });
+            const convo = document.createElement("div");
+            convo.className = "conversation";
+            convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
+            
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "messages";
+            msgDiv.style.display = "none";
+            msgDiv.id = 'messages-' + userId; // Unique ID for each conversation
+            
+            convo.onclick = async () => {
+              // Hide all other message divs
+              document.querySelectorAll('.messages').forEach(div => {
+                div.style.display = 'none';
+              });
+              
+              // Show this conversation's messages
+              msgDiv.style.display = "block";
+              msgDiv.innerHTML = "<p>Loading chat...</p>";
+              
+              // Clear and set up for new system
+              msgDiv.innerHTML = '';
+              msgDiv.id = 'messages'; // Set the ID that loadMessages expects
+              
+              // Load messages using the new system
+              loadMessages(userId);
+            };
+            
+            conversationList.appendChild(convo);
+            conversationList.appendChild(msgDiv);
+          }
+        } catch (error) {
+          console.error('Error loading conversations:', error);
+          conversationList.innerHTML = "<p>Error loading conversations. Please refresh the page.</p>";
+        }
       }
     });
 
@@ -1321,10 +1313,21 @@
     async function loadMessages(targetUserId) {
       currentConversation = targetUserId;
       const messagesContainer = document.getElementById('messages');
+      
+      if (!messagesContainer) {
+        console.error('Messages container not found!');
+        return;
+      }
+      
       messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
 
       try {
         const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+          console.error('No current user found');
+          return;
+        }
+        
         const currentUserId = currentUser.uid;
 
         // Get user names with better fallback logic
@@ -1333,13 +1336,16 @@
           db.collection("users").doc(targetUserId).get()
         ]);
         
-        const currentUserName = currentUserDoc.data()?.displayName || 
-                               currentUserDoc.data()?.name || 
+        const currentUserData = currentUserDoc.data();
+        const targetUserData = targetUserDoc.data();
+        
+        const currentUserName = currentUserData?.displayName || 
+                               currentUserData?.name || 
                                currentUser.email || 
                                'User ' + currentUserId.substring(0, 8);
         
-        const targetUserName = targetUserDoc.data()?.displayName || 
-                              targetUserDoc.data()?.name || 
+        const targetUserName = targetUserData?.displayName || 
+                              targetUserData?.name || 
                               'User ' + targetUserId.substring(0, 8);
 
         // Get all messages and filter client-side (Firestore doesn't support complex queries well)
@@ -1369,13 +1375,11 @@
                   
                   // Skip if swap is cancelled or failed
                   if (swapStatus === 'cancelled' || swapStatus === 'failed') {
-                    console.log('Skipping cancelled/failed swap request:', data.swapId);
                     continue;
                   }
                   
                   // Skip if payment failed
                   if (paymentStatus === 'failed') {
-                    console.log('Skipping failed payment swap request:', data.swapId);
                     continue;
                   }
                 }
@@ -1394,7 +1398,8 @@
         // Display messages
         messagesContainer.innerHTML = '';
         
-        messages.forEach(message => {
+        messages.forEach((message, index) => {
+          
           if (message.type === 'swap_request') {
             messagesContainer.appendChild(displaySwapRequest(message));
           } else if (message.type === 'swap_response') {
@@ -1403,8 +1408,8 @@
             // Regular message display
             const isFromCurrentUser = message.from === currentUserId;
             const profilePic = isFromCurrentUser ? 
-              (currentUserDoc.data()?.profilePic || 'skillio/default_profile.jpg') :
-              (targetUserDoc.data()?.profilePic || 'skillio/default_profile.jpg');
+              (currentUserData?.profilePic || 'skillio/default_profile.jpg') :
+              (targetUserData?.profilePic || 'skillio/default_profile.jpg');
             
             // Get the message content from the correct field
             const messageContent = message.text || message.message || 'No message content';
