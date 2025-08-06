@@ -228,48 +228,11 @@
     }
   }
 
-    // Function to clean up duplicate bookmarks
-    async function cleanupDuplicateBookmarks(userId) {
-      try {
-        console.log('Cleaning up duplicate bookmarks for user:', userId);
-        
-        const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
-        const seenUserIds = new Set();
-        const duplicatesToDelete = [];
-        
-        for (const bookmarkDoc of bookmarksSnap.docs) {
-          const bookmarkedUserId = bookmarkDoc.id;
-          
-          if (seenUserIds.has(bookmarkedUserId)) {
-            // This is a duplicate, mark for deletion
-            duplicatesToDelete.push(bookmarkDoc.ref);
-            console.log('Found duplicate bookmark for user:', bookmarkedUserId);
-          } else {
-            seenUserIds.add(bookmarkedUserId);
-          }
-        }
-        
-        // Delete all duplicates
-        if (duplicatesToDelete.length > 0) {
-          const batch = db.batch();
-          duplicatesToDelete.forEach(ref => {
-            batch.delete(ref);
-          });
-          await batch.commit();
-          console.log(`Deleted ${duplicatesToDelete.length} duplicate bookmarks`);
-        } else {
-          console.log('No duplicate bookmarks found');
-        }
-        
-      } catch (error) {
-        console.error('Error cleaning up duplicate bookmarks:', error);
-      }
-    }
-
   // Function to load all dashboard data
   async function loadDashboardData() {
     const user = firebase.auth().currentUser;
     if (!user) {
+      console.log('No user found, redirecting to auth');
       window.location.href = 'auth.html';
       return;
     }
@@ -277,8 +240,7 @@
     const userId = user.uid;
     console.log('Loading dashboard data for user:', userId);
 
-    // Clean up duplicate bookmarks first
-    await cleanupDuplicateBookmarks(userId);
+    // Removed cleanupDuplicateBookmarks function to prevent permission errors
 
     // Get user level for display
     db.collection('users').doc(userId).get().then(doc => {
