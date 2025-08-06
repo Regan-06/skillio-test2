@@ -271,43 +271,7 @@
       });
     }
 
-    // Function to clean up duplicate bookmarks
-    async function cleanupDuplicateBookmarks(userId) {
-      try {
-        console.log('Cleaning up duplicate bookmarks for user:', userId);
-        
-        const bookmarksSnap = await db.collection('users').doc(userId).collection('bookmarks').get();
-        const seenUserIds = new Set();
-        const duplicatesToDelete = [];
-        
-        for (const bookmarkDoc of bookmarksSnap.docs) {
-          const bookmarkedUserId = bookmarkDoc.id;
-          
-          if (seenUserIds.has(bookmarkedUserId)) {
-            // This is a duplicate, mark for deletion
-            duplicatesToDelete.push(bookmarkDoc.ref);
-            console.log('Found duplicate bookmark for user:', bookmarkedUserId);
-          } else {
-            seenUserIds.add(bookmarkedUserId);
-          }
-        }
-        
-        // Delete all duplicates
-        if (duplicatesToDelete.length > 0) {
-          const batch = db.batch();
-          duplicatesToDelete.forEach(ref => {
-            batch.delete(ref);
-          });
-          await batch.commit();
-          console.log(`Deleted ${duplicatesToDelete.length} duplicate bookmarks`);
-        } else {
-          console.log('No duplicate bookmarks found');
-        }
-        
-      } catch (error) {
-        console.error('Error cleaning up duplicate bookmarks:', error);
-      }
-    }
+    // Removed cleanupDuplicateBookmarks function to prevent permission errors
 
     firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
       auth.onAuthStateChanged(async user => {
@@ -320,9 +284,6 @@
         viewedUserId = paramUid || currentUserId;
         isEditMode = (currentUserId === viewedUserId);
         toggleMode(isEditMode);
-
-        // Clean up duplicate bookmarks for current user
-        await cleanupDuplicateBookmarks(currentUserId);
 
         const doc = await db.collection("users").doc(viewedUserId).get();
         if (doc.exists) {
