@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-49YPEVEDNJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-49YPEVEDNJ');
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Profile – Skillio</title>
+  <title>Skillio Profile | skillio.site</title>
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -182,9 +183,15 @@
     }
 
     function renderFields(data = {}) {
+      console.log("Rendering fields with data:", data);
       const container = document.getElementById("profileFields");
+      if (!container) {
+        console.error("Profile fields container not found!");
+        return;
+      }
       container.innerHTML = '';
 
+      // Add profile picture preview
       const previewImg = document.createElement("img");
       previewImg.id = "preview";
       previewImg.src = data.profilePic || "";
@@ -194,6 +201,7 @@
       fieldMap.forEach(field => {
         const label = document.createElement("label");
         label.textContent = field.label;
+        label.htmlFor = field.id;
         let input;
 
         if (field.type === "dropdown") {
@@ -206,22 +214,32 @@
             input.appendChild(option);
           });
           input.addEventListener("change", () => {
-            document.getElementById("custom" + field.id.charAt(0).toUpperCase() + field.id.slice(1)).style.display = input.value === "Other" ? "block" : "none";
+            const customField = document.getElementById("custom" + field.id.charAt(0).toUpperCase() + field.id.slice(1));
+            if (customField) {
+              customField.style.display = input.value === "Other" ? "block" : "none";
+            }
           });
         } else if (field.type === "textarea") {
           input = document.createElement("textarea");
           input.value = data[field.id] || "";
+          input.rows = 4;
         } else {
           input = document.createElement("input");
           input.type = field.type || "text";
-          if (field.type === "checkbox") input.checked = !!data[field.id];
-          else input.value = data[field.id] || "";
+          if (field.type === "checkbox") {
+            input.checked = !!data[field.id];
+          } else {
+            input.value = data[field.id] || "";
+          }
         }
 
         input.id = field.id;
         input.name = field.id;
+        
         if (!isEditMode) {
-          if (field.type !== "checkbox") input.readOnly = true;
+          if (field.type !== "checkbox") {
+            input.readOnly = true;
+          }
           input.disabled = true;
           input.classList.add("readonly");
         }
@@ -229,8 +247,11 @@
         container.appendChild(label);
         container.appendChild(input);
 
+        // Handle custom skill fields
         if (field.id.startsWith("custom")) {
-          input.style.display = (data[field.id.replace("custom", "").toLowerCase()] === "Other") ? "block" : "none";
+          const baseFieldId = field.id.replace("custom", "").toLowerCase();
+          const baseField = data[baseFieldId];
+          input.style.display = (baseField === "Other") ? "block" : "none";
         }
       });
     }
@@ -297,8 +318,11 @@
         const doc = await db.collection("users").doc(viewedUserId).get();
         if (doc.exists) {
           currentData = doc.data();
-          renderFields(currentData);
+        } else {
+          // Initialize empty data for new users
+          currentData = {};
         }
+        renderFields(currentData);
 
         const feedbackSnap = await db.collection("swap_feedback").where("userId", "==", viewedUserId).get();
         const feedbackData = feedbackSnap.docs.map(doc => doc.data());
@@ -381,7 +405,6 @@
   </script>
 </body>
 </html>
-
 
 
 
