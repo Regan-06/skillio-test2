@@ -190,6 +190,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
+    const storage = firebase.storage();
 
     let isEditMode = true;
     let currentUserId = "";
@@ -232,12 +233,45 @@
       }
       container.innerHTML = '';
 
-      // Add profile picture preview
+      // Add profile picture upload section
+      const imageSection = document.createElement("div");
+      imageSection.className = "image-preview-container";
+      
       const previewImg = document.createElement("img");
       previewImg.id = "preview";
-      previewImg.src = data.profilePic || "";
-      previewImg.style.display = data.profilePic ? "block" : "none";
-      container.appendChild(previewImg);
+      previewImg.src = data.profilePic || "default_profile.jpg";
+      previewImg.style.display = "block";
+      previewImg.style.cursor = isEditMode ? "pointer" : "default";
+      previewImg.title = isEditMode ? "Click to upload new profile picture" : "";
+      
+      if (isEditMode) {
+        previewImg.onclick = () => document.getElementById("profilePicInput").click();
+      }
+      
+      const uploadLabel = document.createElement("label");
+      uploadLabel.textContent = "Profile Picture";
+      uploadLabel.style.fontWeight = "bold";
+      uploadLabel.style.marginBottom = "10px";
+      uploadLabel.style.display = "block";
+      
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.id = "profilePicInput";
+      fileInput.accept = "image/*";
+      fileInput.style.display = "none";
+      fileInput.onchange = handleImageUpload;
+      
+      const uploadStatus = document.createElement("div");
+      uploadStatus.id = "uploadStatus";
+      uploadStatus.style.marginTop = "10px";
+      uploadStatus.style.fontSize = "0.9rem";
+      
+      imageSection.appendChild(uploadLabel);
+      imageSection.appendChild(previewImg);
+      imageSection.appendChild(fileInput);
+      imageSection.appendChild(uploadStatus);
+      
+      container.appendChild(imageSection);
 
       fieldMap.forEach(field => {
         const label = document.createElement("label");
