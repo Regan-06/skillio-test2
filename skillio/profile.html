@@ -17,7 +17,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -190,7 +189,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
-    const storage = firebase.storage();
 
     let isEditMode = true;
     let currentUserId = "";
@@ -206,6 +204,7 @@
       { id: "skillWanted", label: "Skill Wanted", type: "dropdown" },
       { id: "customSkillOffered", label: "Custom Offered Skill" },
       { id: "customSkillWanted", label: "Custom Wanted Skill" },
+      { id: "profilePic", label: "Profile Picture URL" },
       { id: "isPaid", label: "Offer paid sessions", type: "checkbox" },
       { id: "rate", label: "Hourly Rate", type: "number" },
       { id: "isWorkshop", label: "Host workshops", type: "checkbox" },
@@ -230,61 +229,7 @@
       }
     }
 
-    async function handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
 
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File too large! Please select an image under 5MB.");
-        return;
-      }
-
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        alert("Please select an image file.");
-        return;
-      }
-
-      const statusDiv = document.getElementById("uploadStatus");
-      const previewImg = document.getElementById("preview");
-      
-      try {
-        statusDiv.textContent = "Uploading...";
-        statusDiv.className = "loading";
-
-        // Create a unique filename
-        const timestamp = Date.now();
-        const fileName = `profile_pics/${currentUserId}_${timestamp}.jpg`;
-        
-        // Upload to Firebase Storage
-        const storageRef = storage.ref();
-        const fileRef = storageRef.child(fileName);
-        const snapshot = await fileRef.put(file);
-        
-        // Get download URL
-        const downloadURL = await snapshot.ref.getDownloadURL();
-        
-        // Update preview
-        previewImg.src = downloadURL;
-        
-        // Update current data
-        currentData.profilePic = downloadURL;
-        
-        statusDiv.textContent = "Upload successful!";
-        statusDiv.className = "";
-        statusDiv.style.color = "green";
-        
-        // Auto-save the profile
-        await saveProfile();
-        
-      } catch (error) {
-        console.error("Upload error:", error);
-        statusDiv.textContent = "Upload failed. Please try again.";
-        statusDiv.className = "";
-        statusDiv.style.color = "red";
-      }
-    }
 
     function toggleMode(edit) {
       isEditMode = edit;
@@ -301,45 +246,12 @@
       }
       container.innerHTML = '';
 
-      // Add profile picture upload section
-      const imageSection = document.createElement("div");
-      imageSection.className = "image-preview-container";
-      
+      // Add profile picture preview
       const previewImg = document.createElement("img");
       previewImg.id = "preview";
       previewImg.src = data.profilePic || "default_profile.jpg";
-      previewImg.style.display = "block";
-      previewImg.style.cursor = isEditMode ? "pointer" : "default";
-      previewImg.title = isEditMode ? "Click to upload new profile picture" : "";
-      
-      if (isEditMode) {
-        previewImg.onclick = () => document.getElementById("profilePicInput").click();
-      }
-      
-      const uploadLabel = document.createElement("label");
-      uploadLabel.textContent = "Profile Picture";
-      uploadLabel.style.fontWeight = "bold";
-      uploadLabel.style.marginBottom = "10px";
-      uploadLabel.style.display = "block";
-      
-      const fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.id = "profilePicInput";
-      fileInput.accept = "image/*";
-      fileInput.style.display = "none";
-      fileInput.onchange = handleImageUpload;
-      
-      const uploadStatus = document.createElement("div");
-      uploadStatus.id = "uploadStatus";
-      uploadStatus.style.marginTop = "10px";
-      uploadStatus.style.fontSize = "0.9rem";
-      
-      imageSection.appendChild(uploadLabel);
-      imageSection.appendChild(previewImg);
-      imageSection.appendChild(fileInput);
-      imageSection.appendChild(uploadStatus);
-      
-      container.appendChild(imageSection);
+      previewImg.style.display = data.profilePic ? "block" : "none";
+      container.appendChild(previewImg);
 
       fieldMap.forEach(field => {
         const label = document.createElement("label");
@@ -412,8 +324,6 @@
         data[field.id] = field.type === "checkbox" ? input.checked : input.value;
       });
 
-      // Preserve profile picture URL
-      data.profilePic = currentData.profilePic || "";
       data.userId = currentUserId;
       
       currentData = { ...currentData, ...data };
