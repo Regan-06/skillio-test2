@@ -218,6 +218,74 @@
       return urlParams.get(param);
     }
 
+    async function saveProfile() {
+      if (!currentUserId) return;
+      
+      try {
+        await db.collection("users").doc(currentUserId).set(currentData, { merge: true });
+        console.log("Profile saved successfully");
+      } catch (error) {
+        console.error("Error saving profile:", error);
+        alert("Error saving profile. Please try again.");
+      }
+    }
+
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File too large! Please select an image under 5MB.");
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert("Please select an image file.");
+        return;
+      }
+
+      const statusDiv = document.getElementById("uploadStatus");
+      const previewImg = document.getElementById("preview");
+      
+      try {
+        statusDiv.textContent = "Uploading...";
+        statusDiv.className = "loading";
+
+        // Create a unique filename
+        const timestamp = Date.now();
+        const fileName = `profile_pics/${currentUserId}_${timestamp}.jpg`;
+        
+        // Upload to Firebase Storage
+        const storageRef = storage.ref();
+        const fileRef = storageRef.child(fileName);
+        const snapshot = await fileRef.put(file);
+        
+        // Get download URL
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        
+        // Update preview
+        previewImg.src = downloadURL;
+        
+        // Update current data
+        currentData.profilePic = downloadURL;
+        
+        statusDiv.textContent = "Upload successful!";
+        statusDiv.className = "";
+        statusDiv.style.color = "green";
+        
+        // Auto-save the profile
+        await saveProfile();
+        
+      } catch (error) {
+        console.error("Upload error:", error);
+        statusDiv.textContent = "Upload failed. Please try again.";
+        statusDiv.className = "";
+        statusDiv.style.color = "red";
+      }
+    }
+
     function toggleMode(edit) {
       isEditMode = edit;
       document.getElementById("saveButton").style.display = edit ? "block" : "none";
@@ -344,12 +412,15 @@
         data[field.id] = field.type === "checkbox" ? input.checked : input.value;
       });
 
+      // Preserve profile picture URL
+      data.profilePic = currentData.profilePic || "";
       data.userId = currentUserId;
-      await db.collection("users").doc(currentUserId).set(data);
+      
+      currentData = { ...currentData, ...data };
+      await saveProfile();
       alert("Profile saved");
-      currentData = data;
       toggleMode(false);
-      renderFields(data);
+      renderFields(currentData);
     });
 
     function renderFeedback(feedback) {
