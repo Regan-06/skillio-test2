@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-49YPEVEDNJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-49YPEVEDNJ');
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skillio Messages</title>
+  <title>Skillio Messages | skillio.site</title>
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -370,7 +371,7 @@
             
             const convo = document.createElement("div");
             convo.className = "conversation";
-            convo.innerHTML = `<img src="${profilePic || 'https://i.pinimg.com/236x/08/35/0c/08350cafa4fabb8a6a1be2d9f18f2d88.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
+            convo.innerHTML = `<img src="${profilePic || 'skillio/default_profile.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
             
             const msgDiv = document.createElement("div");
             msgDiv.className = "messages";
@@ -812,33 +813,7 @@
       document.body.appendChild(modal);
     }
 
-    // Function to refresh dashboard and calendar
-    function refreshDashboardAndCalendar() {
-      // Refresh dashboard if it's open
-      if (window.location.pathname.includes('dashboard.html')) {
-        console.log('Refreshing dashboard...');
-        // Trigger dashboard refresh by reloading the page or calling the load function
-        if (typeof loadDashboardData === 'function') {
-          loadDashboardData();
-        } else {
-          window.location.reload();
-        }
-      }
-      
-      // Refresh calendar if it's open
-      if (window.location.pathname.includes('calendar.html')) {
-        console.log('Refreshing calendar...');
-        // Trigger calendar refresh by reloading the page or calling the load function
-        if (typeof loadAppointments === 'function') {
-          const currentUser = firebase.auth().currentUser;
-          if (currentUser) {
-            loadAppointments(currentUser.uid);
-          }
-        } else {
-          window.location.reload();
-        }
-      }
-    }
+
 
     // Simulate successful payment
     async function simulatePaymentSuccess(swapId, amount, targetUserId, targetUserName) {
@@ -886,8 +861,8 @@
         closeModal();
         alert(`Payment of $${amount} processed successfully! The swap is now active and payment is held in escrow.`);
         
-        // Refresh dashboard and calendar
-        refreshDashboardAndCalendar();
+        // Reload messages to show updated swap status
+        loadMessages();
         
       } catch (error) {
         console.error('Error processing payment:', error);
@@ -1255,8 +1230,8 @@
 
         alert(`Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`);
         
-        // Refresh dashboard and calendar
-        refreshDashboardAndCalendar();
+        // Reload messages to show updated status
+        loadMessages();
         
       } catch (error) {
         console.error('Error manually releasing payment:', error);
@@ -1490,6 +1465,7 @@
   </script>
 </body>
 </html>
+
 
 
 
