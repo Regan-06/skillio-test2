@@ -17,6 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -91,6 +92,47 @@
       background: none;
       color: #333;
     }
+    .image-upload-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .image-upload-container input[type="file"] {
+      flex: 1;
+      padding: 8px;
+      border: 2px dashed #00bcd4;
+      border-radius: 8px;
+      background: #f8f9fa;
+      cursor: pointer;
+    }
+    .image-upload-container input[type="file"]:hover {
+      background: #e3f2fd;
+    }
+    .upload-btn {
+      padding: 8px 16px;
+      background: #00bcd4;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .upload-btn:hover {
+      background: #0097a7;
+    }
+    .upload-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .image-preview-container {
+      text-align: center;
+      margin: 15px 0;
+    }
+    .loading {
+      color: #00bcd4;
+      font-style: italic;
+    }
     .feedback-section {
       margin-top: 30px;
       padding-top: 20px;
@@ -163,7 +205,6 @@
       { id: "skillWanted", label: "Skill Wanted", type: "dropdown" },
       { id: "customSkillOffered", label: "Custom Offered Skill" },
       { id: "customSkillWanted", label: "Custom Wanted Skill" },
-      { id: "profilePic", label: "Profile Picture URL" },
       { id: "isPaid", label: "Offer paid sessions", type: "checkbox" },
       { id: "rate", label: "Hourly Rate", type: "number" },
       { id: "isWorkshop", label: "Host workshops", type: "checkbox" },
@@ -405,6 +446,8 @@
   </script>
 </body>
 </html>
+
+
 
 
 
