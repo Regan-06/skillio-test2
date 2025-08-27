@@ -216,9 +216,13 @@
         });
         
         // Send welcome email
-        await sendWelcomeEmail(email, name);
+        const emailSent = await sendWelcomeEmail(email, name);
         
-        showMessage('Account created successfully! Welcome email sent.', 'success');
+        if (emailSent) {
+          showMessage('Account created successfully! Welcome email sent.', 'success');
+        } else {
+          showMessage('Account created successfully! (Email delivery issue - check console)', 'success');
+        }
         
         // Redirect to main page after 2 seconds
         setTimeout(() => {
@@ -249,6 +253,8 @@
 
     async function sendWelcomeEmail(email, name) {
       try {
+        console.log('Attempting to send welcome email to:', email);
+        
         const templateParams = {
           to_email: email,
           to_name: name,
@@ -258,11 +264,20 @@
           company_email: 'support@skillio.site'
         };
 
-        await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
-        console.log('Welcome email sent successfully');
+        console.log('Template parameters:', templateParams);
+        
+        const result = await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
+        console.log('Welcome email sent successfully:', result);
+        return true;
       } catch (error) {
         console.error('Error sending welcome email:', error);
+        console.error('Error details:', {
+          message: error.message,
+          text: error.text,
+          status: error.status
+        });
         // Don't show error to user - email failure shouldn't block signup
+        return false;
       }
     }
 
