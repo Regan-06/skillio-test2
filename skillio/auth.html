@@ -199,6 +199,8 @@
 
     async function signup() {
       console.log('=== SIGNUP FUNCTION CALLED ===');
+      console.log('Signup button clicked!');
+      
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
       const name = document.getElementById('signupName').value;
@@ -238,10 +240,11 @@
           showMessage('Account created successfully! (Email delivery issue - check console)', 'success');
         }
         
-        // Redirect to main page after 2 seconds
+        // Redirect to main page after 5 seconds (longer delay to see logs)
         setTimeout(() => {
+          console.log('Redirecting to main.html...');
           window.location.href = 'main.html';
-        }, 2000);
+        }, 5000);
         
       } catch (error) {
         showMessage('Error creating account: ' + error.message, 'error');
@@ -273,13 +276,12 @@
         console.log('Service ID:', 'service_o60m1rw');
         console.log('Template ID:', 'template_5x59vsd');
         
+        // Test with exact parameters that work in dashboard
         const templateParams = {
-          to_email: email,
           to_name: name,
-          from_name: 'Skillio Team',
           website_link: 'https://skillio.site',
-          company_name: 'Skillio',
-          company_email: 'support@skillio.site'
+          company_email: 'support@skillio.site',
+          to_email: email  // Add this back in case template needs it
         };
 
         console.log('Template parameters:', templateParams);
@@ -319,3 +321,4 @@
   </script>
 </body>
 </html>
+
