@@ -3,117 +3,282 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Skillio – Login / Sign Up</title>
+  <title>Skillio - Login/Signup</title>
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  
+  <!-- EmailJS for automated emails -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  
   <style>
     body {
-      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #c9f2f5;
-      color: #0f2027;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      padding: 40px;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
     }
+    
     .container {
       background: white;
       padding: 40px;
       border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 188, 212, 0.3);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
       max-width: 400px;
       width: 100%;
     }
-    h2 {
+    
+    h1 {
       text-align: center;
-      color: #00bcd4;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    
+    .form-group {
       margin-bottom: 20px;
     }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: bold;
+    }
+    
     input {
       width: 100%;
       padding: 12px;
-      margin: 10px 0;
+      border: 2px solid #ddd;
       border-radius: 8px;
-      border: 1px solid #ccc;
+      font-size: 16px;
       box-sizing: border-box;
     }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
     button {
       width: 100%;
-      padding: 14px;
-      background: #00bcd4;
+      padding: 12px;
+      background: #667eea;
       color: white;
-      font-size: 1rem;
       border: none;
       border-radius: 8px;
+      font-size: 16px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-bottom: 10px;
     }
+    
     button:hover {
-      background: #0097a7;
+      background: #5a6fd8;
     }
+    
     .toggle {
       text-align: center;
       margin-top: 20px;
+    }
+    
+    .toggle a {
+      color: #667eea;
+      text-decoration: none;
       cursor: pointer;
-      color: #00bcd4;
+    }
+    
+    .error {
+      color: #e74c3c;
+      text-align: center;
+      margin-top: 10px;
+    }
+    
+    .success {
+      color: #27ae60;
+      text-align: center;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">Login to Skillio</h2>
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button onclick="handleAuth()" id="authBtn">Login</button>
-    <div class="toggle" onclick="toggleMode()">Don't have an account? Sign up here</div>
+    <h1>🎯 Skillio</h1>
+    <div id="loginForm">
+      <div class="form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email">
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password">
+      </div>
+      <button onclick="login()">Login</button>
+      <div class="toggle">
+        <a onclick="toggleForm()">Don't have an account? Sign up</a>
+      </div>
+    </div>
+    
+    <div id="signupForm" style="display: none;">
+      <div class="form-group">
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" placeholder="Enter your email">
+      </div>
+      <div class="form-group">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="Enter your password">
+      </div>
+      <div class="form-group">
+        <label for="signupName">Display Name</label>
+        <input type="text" id="signupName" placeholder="Enter your name">
+      </div>
+      <button onclick="signup()">Sign Up</button>
+      <div class="toggle">
+        <a onclick="toggleForm()">Already have an account? Login</a>
+      </div>
+    </div>
+    
+    <div id="message"></div>
   </div>
 
   <script>
+    // Initialize EmailJS
+    (function() {
+      emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your EmailJS user ID
+    })();
+
     const firebaseConfig = {
       apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
       authDomain: "skillio-b2f44.firebaseapp.com",
       projectId: "skillio-b2f44",
       storageBucket: "skillio-b2f44.appspot.com",
       messagingSenderId: "883002535621",
-      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac",
-      measurementId: "G-49YPEVEDNJ"
+      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
     };
     
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    let isLogin = true;
-
-    function toggleMode() {
-      isLogin = !isLogin;
-      document.getElementById("formTitle").innerText = isLogin ? "Login to Skillio" : "Sign Up for Skillio";
-      document.getElementById("authBtn").innerText = isLogin ? "Login" : "Sign Up";
-      document.querySelector(".toggle").innerText = isLogin ? "Don't have an account? Sign up here" : "Already have an account? Login here";
+    function toggleForm() {
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      
+      if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+      } else {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+      }
+      
+      document.getElementById('message').innerHTML = '';
     }
 
-    function handleAuth() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
+    async function signup() {
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const name = document.getElementById('signupName').value;
       
-      if (!email || !password) return alert("Please fill in both fields");
-
-      if (isLogin) {
-        auth.signInWithEmailAndPassword(email, password)
-          .then(() => {
-            alert("Login successful!");
-            window.location.href = "main.html";
-          })
-          .catch(err => alert("Login failed: " + err.message));
-      } else {
-        auth.createUserWithEmailAndPassword(email, password)
-          .then(() => {
-            alert("Signup successful!");
-            window.location.href = "main.html";
-          })
-          .catch(err => alert("Signup failed: " + err.message));
+      if (!email || !password || !name) {
+        showMessage('Please fill in all fields', 'error');
+        return;
+      }
+      
+      try {
+        // Create user account
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // Update display name
+        await user.updateProfile({
+          displayName: name
+        });
+        
+        // Create user profile in Firestore
+        await db.collection('users').doc(user.uid).set({
+          name: name,
+          email: email,
+          displayName: name,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Send welcome email
+        await sendWelcomeEmail(email, name);
+        
+        showMessage('Account created successfully! Welcome email sent.', 'success');
+        
+        // Redirect to main page after 2 seconds
+        setTimeout(() => {
+          window.location.href = 'main.html';
+        }, 2000);
+        
+      } catch (error) {
+        showMessage('Error creating account: ' + error.message, 'error');
       }
     }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      if (!email || !password) {
+        showMessage('Please fill in all fields', 'error');
+        return;
+      }
+      
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        window.location.href = 'main.html';
+      } catch (error) {
+        showMessage('Error logging in: ' + error.message, 'error');
+      }
+    }
+
+    async function sendWelcomeEmail(email, name) {
+      try {
+        const templateParams = {
+          to_email: email,
+          to_name: name,
+          from_name: 'Skillio Team',
+          website_link: 'https://skillio.site',
+          company_name: 'Skillio',
+          company_email: 'support@skillio.site'
+        };
+
+        await emailjs.send('service_skillio', 'template_welcome', templateParams);
+        console.log('Welcome email sent successfully');
+      } catch (error) {
+        console.error('Error sending welcome email:', error);
+        // Don't show error to user - email failure shouldn't block signup
+      }
+    }
+
+    function showMessage(message, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.innerHTML = message;
+      messageDiv.className = type;
+    }
+
+    // Check if user is already logged in
+    auth.onAuthStateChanged(function(user) {
+      if (user) {
+        window.location.href = 'main.html';
+      }
+    });
   </script>
 </body>
 </html>
+
