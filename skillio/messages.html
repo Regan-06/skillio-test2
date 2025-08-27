@@ -862,7 +862,9 @@
         alert(`Payment of $${amount} processed successfully! The swap is now active and payment is held in escrow.`);
         
         // Reload messages to show updated swap status
-        loadMessages();
+        if (currentConversation) {
+          loadMessages(currentConversation);
+        }
         
       } catch (error) {
         console.error('Error processing payment:', error);
@@ -1231,7 +1233,9 @@
         alert(`Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`);
         
         // Reload messages to show updated status
-        loadMessages();
+        if (currentConversation) {
+          loadMessages(currentConversation);
+        }
         
       } catch (error) {
         console.error('Error manually releasing payment:', error);
@@ -1295,7 +1299,6 @@
 
     // Modify the loadMessages function to handle swap messages
     async function loadMessages(targetUserId) {
-      currentConversation = targetUserId;
       const messagesContainer = document.getElementById('messages');
       
       if (!messagesContainer) {
@@ -1303,6 +1306,13 @@
         return;
       }
       
+      // If no targetUserId provided, just show a message
+      if (!targetUserId) {
+        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Select a conversation to view messages</div>';
+        return;
+      }
+      
+      currentConversation = targetUserId;
       messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
 
       try {
@@ -1465,7 +1475,6 @@
   </script>
 </body>
 </html>
-
 
 
 
