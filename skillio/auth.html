@@ -232,7 +232,9 @@
         });
         
         // Send welcome email
+        console.log('About to send welcome email...');
         const emailSent = await sendWelcomeEmail(email, name);
+        console.log('Email send result:', emailSent);
         
         if (emailSent) {
           showMessage('Account created successfully! Welcome email sent.', 'success');
@@ -240,11 +242,14 @@
           showMessage('Account created successfully! (Email delivery issue - check console)', 'success');
         }
         
-        // Redirect to main page after 5 seconds (longer delay to see logs)
-        setTimeout(() => {
-          console.log('Redirecting to main.html...');
-          window.location.href = 'main.html';
-        }, 5000);
+        // Temporarily disable redirect to debug email issue
+        // setTimeout(() => {
+        //   console.log('Redirecting to main.html...');
+        //   window.location.href = 'main.html';
+        // }, 5000);
+        
+        // Show manual redirect button instead
+        showMessage('Account created! Check console for email status. <a href="main.html" style="color: #00bcd4;">Click here to continue</a>', 'success');
         
       } catch (error) {
         showMessage('Error creating account: ' + error.message, 'error');
@@ -321,4 +326,3 @@
   </script>
 </body>
 </html>
-
