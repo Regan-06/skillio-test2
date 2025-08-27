@@ -144,7 +144,7 @@
         <label for="signupName">Display Name</label>
         <input type="text" id="signupName" placeholder="Enter your name">
       </div>
-      <button onclick="signup()">Sign Up</button>
+      <button onclick="console.log('Signup button clicked!'); signup();">Sign Up</button>
       <div class="toggle">
         <a onclick="toggleForm()">Already have an account? Login</a>
       </div>
@@ -199,7 +199,8 @@
 
     async function signup() {
       console.log('=== SIGNUP FUNCTION CALLED ===');
-      console.log('Signup button clicked!');
+      console.log('Signup function is running!');
+      alert('Signup function called!'); // Temporary alert to confirm function is called
       
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
