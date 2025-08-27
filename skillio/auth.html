@@ -256,6 +256,11 @@
         // DEBUGGER: This will pause before calling the email function
         debugger;
         
+        // Test with hardcoded values to bypass form issues
+        console.log('Testing email with hardcoded values...');
+        const testEmailSent = await sendWelcomeEmail('test@example.com', 'Test User');
+        console.log('Test email result:', testEmailSent);
+        
         const emailSent = await sendWelcomeEmail(email, name);
         console.log('Email send result:', emailSent);
         
