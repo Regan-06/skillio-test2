@@ -154,9 +154,19 @@
   </div>
 
   <script>
+    console.log('=== PAGE LOADED ===');
+    console.log('EmailJS library loaded:', typeof emailjs !== 'undefined');
+    
     // Initialize EmailJS
     (function() {
-      emailjs.init("UQRKVlfzmce2tXRBi"); // Your EmailJS public key
+      console.log('=== EMAILJS INITIALIZATION ===');
+      try {
+        emailjs.init("UQRKVlfzmce2tXRBi"); // Your EmailJS public key
+        console.log('EmailJS initialized successfully');
+      } catch (error) {
+        console.error('Error initializing EmailJS:', error);
+      }
+      console.log('=== EMAILJS INITIALIZATION END ===');
     })();
 
     const firebaseConfig = {
@@ -188,11 +198,15 @@
     }
 
     async function signup() {
+      console.log('=== SIGNUP FUNCTION CALLED ===');
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
       const name = document.getElementById('signupName').value;
       
+      console.log('Form values:', { email, name, password: '***' });
+      
       if (!email || !password || !name) {
+        console.log('Missing fields detected');
         showMessage('Please fill in all fields', 'error');
         return;
       }
@@ -253,7 +267,11 @@
 
     async function sendWelcomeEmail(email, name) {
       try {
+        console.log('=== EMAILJS DEBUG START ===');
         console.log('Attempting to send welcome email to:', email);
+        console.log('EmailJS initialized with key:', 'UQRKVlfzmce2tXRBi');
+        console.log('Service ID:', 'service_o60m1rw');
+        console.log('Template ID:', 'template_5x59vsd');
         
         const templateParams = {
           to_email: email,
@@ -266,16 +284,21 @@
 
         console.log('Template parameters:', templateParams);
         
+        console.log('Calling emailjs.send...');
         const result = await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
         console.log('Welcome email sent successfully:', result);
+        console.log('=== EMAILJS DEBUG END ===');
         return true;
       } catch (error) {
+        console.error('=== EMAILJS ERROR ===');
         console.error('Error sending welcome email:', error);
         console.error('Error details:', {
           message: error.message,
           text: error.text,
-          status: error.status
+          status: error.status,
+          response: error.response
         });
+        console.error('=== EMAILJS ERROR END ===');
         // Don't show error to user - email failure shouldn't block signup
         return false;
       }
@@ -296,4 +319,3 @@
   </script>
 </body>
 </html>
-
