@@ -371,7 +371,7 @@
             
             const convo = document.createElement("div");
             convo.className = "conversation";
-            convo.innerHTML = `<img src="${profilePic || 'default_profile.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
+            convo.innerHTML = `<img src="${profilePic || 'default_image.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
             
             const msgDiv = document.createElement("div");
             msgDiv.className = "messages";
@@ -1408,9 +1408,9 @@
           } else {
             // Regular message display
             const isFromCurrentUser = message.from === currentUserId;
-            const profilePic = isFromCurrentUser ? 
-              (currentUserData?.profilePic || 'default_profile.jpg') :
-              (targetUserData?.profilePic || 'default_profile.jpg');
+                    const profilePic = isFromCurrentUser ? 
+          (currentUserData?.profilePic || 'default_image.jpg') :
+          (targetUserData?.profilePic || 'default_image.jpg');
             
             // Get the message content from the correct field
             const messageContent = message.text || message.message || 'No message content';
