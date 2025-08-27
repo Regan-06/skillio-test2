@@ -144,7 +144,7 @@
         <label for="signupName">Display Name</label>
         <input type="text" id="signupName" placeholder="Enter your name">
       </div>
-      <button onclick="console.log('Signup button clicked!'); signup();">Sign Up</button>
+      <button onclick="alert('Button clicked!'); console.log('Signup button clicked!'); signup();" style="background: red;">Sign Up (TEST)</button>
       <div class="toggle">
         <a onclick="toggleForm()">Already have an account? Login</a>
       </div>
@@ -156,6 +156,10 @@
   <script>
     console.log('=== PAGE LOADED ===');
     console.log('EmailJS library loaded:', typeof emailjs !== 'undefined');
+    
+    // Test if basic JavaScript is working
+    console.log('Basic JavaScript test:', 'Hello World');
+    alert('Page loaded successfully!'); // Temporary test alert
     
     // Initialize EmailJS
     (function() {
@@ -183,15 +187,18 @@
     const db = firebase.firestore();
 
     function toggleForm() {
+      console.log('Toggle form called!');
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
       
       if (loginForm.style.display === 'none') {
         loginForm.style.display = 'block';
         signupForm.style.display = 'none';
+        console.log('Switched to login form');
       } else {
         loginForm.style.display = 'none';
         signupForm.style.display = 'block';
+        console.log('Switched to signup form');
       }
       
       document.getElementById('message').innerHTML = '';
@@ -234,6 +241,10 @@
         
         // Send welcome email
         console.log('About to send welcome email...');
+        
+        // DEBUGGER: This will pause before calling the email function
+        debugger;
+        
         const emailSent = await sendWelcomeEmail(email, name);
         console.log('Email send result:', emailSent);
         
@@ -291,6 +302,9 @@
         };
 
         console.log('Template parameters:', templateParams);
+        
+        // DEBUGGER: This will pause execution so you can step through
+        debugger;
         
         console.log('Calling emailjs.send...');
         const result = await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
