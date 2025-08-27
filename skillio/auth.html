@@ -258,6 +258,20 @@
         
         // Test with hardcoded values to bypass form issues
         console.log('Testing email with hardcoded values...');
+        
+        // Simple EmailJS test first
+        console.log('Testing basic EmailJS functionality...');
+        try {
+          const testResult = await emailjs.send('service_o60m1rw', 'template_5x59vsd', {
+            to_name: 'Test User',
+            website_link: 'https://skillio.site',
+            company_email: 'reganmant06@gmail.com'
+          });
+          console.log('Basic EmailJS test successful:', testResult);
+        } catch (testError) {
+          console.error('Basic EmailJS test failed:', testError);
+        }
+        
         const testEmailSent = await sendWelcomeEmail('test@example.com', 'Test User');
         console.log('Test email result:', testEmailSent);
         
@@ -323,8 +337,16 @@
         debugger;
         
         console.log('Calling emailjs.send...');
-        const result = await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
-        console.log('Welcome email sent successfully:', result);
+        console.log('EmailJS object:', typeof emailjs);
+        console.log('emailjs.send function:', typeof emailjs.send);
+        
+        try {
+          const result = await emailjs.send('service_o60m1rw', 'template_5x59vsd', templateParams);
+          console.log('Welcome email sent successfully:', result);
+        } catch (sendError) {
+          console.error('EmailJS send error:', sendError);
+          throw sendError;
+        }
         console.log('=== EMAILJS DEBUG END ===');
         return true;
       } catch (error) {
