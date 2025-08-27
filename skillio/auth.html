@@ -209,9 +209,20 @@
       console.log('Signup function is running!');
       alert('Signup function called!'); // Temporary alert to confirm function is called
       
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
-      const name = document.getElementById('signupName').value;
+      // Debug: Check if elements exist
+      const emailElement = document.getElementById('signupEmail');
+      const passwordElement = document.getElementById('signupPassword');
+      const nameElement = document.getElementById('signupName');
+      
+      console.log('Form elements found:', {
+        emailElement: !!emailElement,
+        passwordElement: !!passwordElement,
+        nameElement: !!nameElement
+      });
+      
+      const email = emailElement ? emailElement.value : '';
+      const password = passwordElement ? passwordElement.value : '';
+      const name = nameElement ? nameElement.value : '';
       
       console.log('Form values:', { email, name, password: '***' });
       
@@ -341,3 +352,4 @@
   </script>
 </body>
 </html>
+
