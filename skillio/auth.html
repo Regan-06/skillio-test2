@@ -258,6 +258,7 @@
         
         // Test with hardcoded values to bypass form issues
         console.log('Testing email with hardcoded values...');
+        alert('About to test EmailJS...'); // Temporary alert to confirm we reach this point
         
         // Simple EmailJS test first
         console.log('Testing basic EmailJS functionality...');
@@ -267,6 +268,7 @@
         
         try {
           console.log('About to call emailjs.send...');
+          alert('About to call emailjs.send...'); // Temporary alert to confirm we reach this point
           const testResult = await emailjs.send('service_o60m1rw', 'template_5x59vsd', {
             to_name: 'Test User',
             website_link: 'https://skillio.site',
