@@ -245,19 +245,24 @@
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         alert('Step 5: Firebase account created successfully!');
+        alert('Step 5.1: About to update profile...');
         
         // Update display name
+        alert('Step 5.2: Updating profile...');
         await user.updateProfile({
           displayName: name
         });
+        alert('Step 5.3: Profile updated!');
         
         // Create user profile in Firestore
+        alert('Step 5.4: Creating Firestore profile...');
         await db.collection('users').doc(user.uid).set({
           name: name,
           email: email,
           displayName: name,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        alert('Step 5.5: Firestore profile created!');
         
         // Send welcome email
         console.log('About to send welcome email...');
