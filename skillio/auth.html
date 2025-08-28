@@ -209,6 +209,9 @@
       console.log('Signup function is running!');
       alert('Signup function called!'); // Temporary alert to confirm function is called
       
+      // Add step-by-step debugging
+      alert('Step 1: Starting form validation...');
+      
       // Debug: Check if elements exist
       const emailElement = document.getElementById('signupEmail');
       const passwordElement = document.getElementById('signupPassword');
@@ -225,17 +228,23 @@
       const name = nameElement ? nameElement.value : '';
       
       console.log('Form values:', { email, name, password: '***' });
+      alert('Step 2: Form values checked - email: ' + email + ', name: ' + name);
       
       if (!email || !password || !name) {
         console.log('Missing fields detected');
+        alert('Step 2a: Missing fields detected - stopping here');
         showMessage('Please fill in all fields', 'error');
         return;
       }
       
+      alert('Step 3: Form validation passed - starting Firebase account creation...');
+      
       try {
         // Create user account
+        alert('Step 4: About to create Firebase account...');
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
+        alert('Step 5: Firebase account created successfully!');
         
         // Update display name
         await user.updateProfile({
@@ -387,5 +396,6 @@
   </script>
 </body>
 </html>
+
 
 
