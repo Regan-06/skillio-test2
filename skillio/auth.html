@@ -261,7 +261,12 @@
         
         // Simple EmailJS test first
         console.log('Testing basic EmailJS functionality...');
+        console.log('EmailJS object:', emailjs);
+        console.log('EmailJS send function:', emailjs.send);
+        console.log('EmailJS init function:', emailjs.init);
+        
         try {
+          console.log('About to call emailjs.send...');
           const testResult = await emailjs.send('service_o60m1rw', 'template_5x59vsd', {
             to_name: 'Test User',
             website_link: 'https://skillio.site',
@@ -270,6 +275,7 @@
           console.log('Basic EmailJS test successful:', testResult);
         } catch (testError) {
           console.error('Basic EmailJS test failed:', testError);
+          console.error('Error details:', testError.message, testError.stack);
         }
         
         const testEmailSent = await sendWelcomeEmail('test@example.com', 'Test User');
@@ -379,4 +385,5 @@
   </script>
 </body>
 </html>
+
 
