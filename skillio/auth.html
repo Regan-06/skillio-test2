@@ -271,13 +271,17 @@
         
         // Simple EmailJS test first
         console.log('Testing basic EmailJS functionality...');
+        alert('Step 6: About to test EmailJS functionality...');
+        
         console.log('EmailJS object:', emailjs);
         console.log('EmailJS send function:', emailjs.send);
         console.log('EmailJS init function:', emailjs.init);
         
+        alert('Step 7: EmailJS object checked - send function: ' + typeof emailjs.send);
+        
         try {
           console.log('About to call emailjs.send...');
-          alert('About to call emailjs.send...'); // Temporary alert to confirm we reach this point
+          alert('Step 8: About to call emailjs.send...');
           const testResult = await emailjs.send('service_o60m1rw', 'template_5x59vsd', {
             to_name: 'Test User',
             website_link: 'https://skillio.site',
