@@ -928,6 +928,7 @@
         // Update swap with payment success
         await db.collection("swaps").doc(swapId).update({
           paymentStatus: 'paid',
+          status: 'pending',
           paymentProcessedAt: firebase.firestore.FieldValue.serverTimestamp(),
           mockPayment: true // Flag to identify mock payments
         });
