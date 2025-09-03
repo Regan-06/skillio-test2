@@ -60,6 +60,29 @@
       cursor: pointer;
     }
 
+    .swap-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .swap-steps .step {
+      flex: 1;
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .swap-steps .step.active {
+      border-bottom-color: #00bcd4;
+      font-weight: bold;
+    }
+
+    .small-note {
+      font-size: 0.9rem;
+      color: #555;
+    }
+
     /* iPhone-style Modal */
     .modal {
       display: none;
@@ -559,80 +582,115 @@
       }
     });
 
+    let currentTargetUserId = null;
+    let currentTargetUserName = null;
+
     // iPhone-style Swap Modal
     function openSwapModal(targetUserId, targetUserName) {
+      currentTargetUserId = targetUserId;
+      currentTargetUserName = targetUserName;
       const modal = document.createElement('div');
       modal.className = 'modal';
       modal.style.display = 'block';
-      
+
       modal.innerHTML = `
         <div class="modal-content">
           <div class="modal-header">
-            Create Swap with ${targetUserName}
+            Swap with ${targetUserName}
           </div>
           <div class="modal-body">
+            <div class="swap-steps">
+              <span class="step step-details active">1. Details</span>
+              <span class="step step-confirm">2. Confirm</span>
+            </div>
+            <p class="swap-intro">Step 1 of 2 – Enter swap details. We'll confirm on the next screen.</p>
             <form id="swapForm">
-              <div class="form-group">
-                <label for="swapDate">Date:</label>
-                <input type="date" id="swapDate" required>
+              <div id="swapStep1">
+                <div class="form-group">
+                  <label for="swapDate">Date:</label>
+                  <input type="date" id="swapDate" required>
+                </div>
+                <div class="form-group">
+                  <label for="swapStartTime">Start Time:</label>
+                  <input type="time" id="swapStartTime" required>
+                </div>
+                <div class="form-group">
+                  <label for="swapEndTime">End Time:</label>
+                  <input type="time" id="swapEndTime" required>
+                </div>
+                <div class="form-group">
+                  <label for="swapLocation">Location:</label>
+                  <input type="text" id="swapLocation" placeholder="e.g., Online or local cafe">
+                </div>
+                <div class="form-group">
+                  <label for="swapDescription">Description:</label>
+                  <textarea id="swapDescription" placeholder="Briefly describe the swap"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="paymentAmount">Payment Amount ($):</label>
+                  <input type="number" id="paymentAmount" min="0" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                  <label for="paymentMethod">Payment Method:</label>
+                  <select id="paymentMethod" required>
+                    <option value="">Select payment method</option>
+                    <option value="stripe">Credit/Debit Card</option>
+                    <option value="paypal">PayPal</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="paymentTerms" required>
+                    I agree to pay the specified amount upfront. Payment will be held until both parties confirm completion or 48 hours pass.
+                  </label>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="swapStartTime">Start Time:</label>
-                <input type="time" id="swapStartTime" required>
-              </div>
-              <div class="form-group">
-                <label for="swapEndTime">End Time:</label>
-                <input type="time" id="swapEndTime" required>
-              </div>
-              <div class="form-group">
-                <label for="swapLocation">Location:</label>
-                <input type="text" id="swapLocation" placeholder="Where will this swap take place?">
-              </div>
-              <div class="form-group">
-                <label for="swapDescription">Description:</label>
-                <textarea id="swapDescription" placeholder="What skills will be exchanged?"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="paymentAmount">Payment Amount ($):</label>
-                <input type="number" id="paymentAmount" min="0" step="0.01" placeholder="0.00" required>
-              </div>
-              <div class="form-group">
-                <label for="paymentMethod">Payment Method:</label>
-                <select id="paymentMethod" required>
-                  <option value="">Select payment method</option>
-                  <option value="stripe">Credit/Debit Card</option>
-                  <option value="paypal">PayPal</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="paymentTerms" required>
-                  I agree to pay the specified amount upfront. Payment will be held until both parties confirm completion or 48 hours pass.
-                </label>
+              <div id="swapStep2" style="display:none;">
+                <h3>Review Swap</h3>
+                <p><strong>Date:</strong> <span id="reviewDate"></span></p>
+                <p><strong>Time:</strong> <span id="reviewTime"></span></p>
+                <p><strong>Location:</strong> <span id="reviewLocation"></span></p>
+                <p><strong>Description:</strong> <span id="reviewDescription"></span></p>
+                <p><strong>Payment:</strong> $<span id="reviewPaymentAmount"></span> via <span id="reviewPaymentMethod"></span></p>
+                <p class="small-note">Payment will be held until both parties confirm completion or 48 hours pass.</p>
               </div>
             </form>
           </div>
           <div class="modal-footer">
             <button class="btn btn-cancel" onclick="closeSwapModal()">Cancel</button>
-            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Create Swap & Pay</button>
+            <button class="btn btn-cancel" id="backButton" style="display:none;" onclick="prevSwapStep()">Back</button>
+            <button class="btn btn-create" id="nextButton" onclick="nextSwapStep()">Next</button>
+            <button class="btn btn-create" id="confirmButton" style="display:none;" onclick="createSwap()">Confirm & Pay</button>
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(modal);
-      
+
+      // Show quick tutorial once for first-time visitors
+      if (!localStorage.getItem('swapTutorialShown')) {
+        alert('Welcome! Follow the steps to create your first swap.');
+        localStorage.setItem('swapTutorialShown', 'true');
+      }
+
       // Set default date to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       selectedDate = tomorrow;
       document.getElementById('swapDate').value = tomorrow.toISOString().split('T')[0];
-      
+
       // Set default time to current time + 1 hour
       const now = new Date();
       now.setHours(now.getHours() + 1);
       document.getElementById('swapStartTime').value = now.toTimeString().slice(0, 5);
       now.setHours(now.getHours() + 1);
       document.getElementById('swapEndTime').value = now.toTimeString().slice(0, 5);
+
+      // Prefill other helpful defaults
+      document.getElementById('swapLocation').value = 'Online';
+      document.getElementById('swapDescription').value = 'Skill swap session';
+      document.getElementById('paymentAmount').value = '0.00';
+      document.getElementById('paymentMethod').value = 'stripe';
     }
 
     function closeSwapModal() {
@@ -642,7 +700,53 @@
       }
     }
 
-    async function createSwap(targetUserId, targetUserName) {
+    function nextSwapStep() {
+      const date = document.getElementById('swapDate').value;
+      const startTime = document.getElementById('swapStartTime').value;
+      const endTime = document.getElementById('swapEndTime').value;
+      const location = document.getElementById('swapLocation').value;
+      const description = document.getElementById('swapDescription').value;
+      const paymentAmount = document.getElementById('paymentAmount').value;
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const paymentTerms = document.getElementById('paymentTerms').checked;
+
+      if (!date || !startTime || !endTime || !paymentAmount || !paymentMethod || !paymentTerms) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      if (startTime >= endTime) {
+        alert('End time must be after start time.');
+        return;
+      }
+
+      document.getElementById('reviewDate').textContent = date;
+      document.getElementById('reviewTime').textContent = `${startTime} - ${endTime}`;
+      document.getElementById('reviewLocation').textContent = location || 'Online';
+      document.getElementById('reviewDescription').textContent = description || 'Skill swap session';
+      document.getElementById('reviewPaymentAmount').textContent = parseFloat(paymentAmount).toFixed(2);
+      document.getElementById('reviewPaymentMethod').textContent = paymentMethod === 'stripe' ? 'Card' : 'PayPal';
+
+      document.getElementById('swapStep1').style.display = 'none';
+      document.getElementById('swapStep2').style.display = 'block';
+      document.querySelector('.step-details').classList.remove('active');
+      document.querySelector('.step-confirm').classList.add('active');
+      document.getElementById('nextButton').style.display = 'none';
+      document.getElementById('confirmButton').style.display = 'block';
+      document.getElementById('backButton').style.display = 'block';
+    }
+
+    function prevSwapStep() {
+      document.getElementById('swapStep1').style.display = 'block';
+      document.getElementById('swapStep2').style.display = 'none';
+      document.querySelector('.step-details').classList.add('active');
+      document.querySelector('.step-confirm').classList.remove('active');
+      document.getElementById('nextButton').style.display = 'block';
+      document.getElementById('confirmButton').style.display = 'none';
+      document.getElementById('backButton').style.display = 'none';
+    }
+
+    async function createSwap() {
       const currentUser = firebase.auth().currentUser;
       if (!currentUser) {
         alert('You must be signed in to create a swap.');
@@ -676,7 +780,7 @@
       try {
         console.log('Creating swap with data:', {
           from: currentUser.uid,
-          to: targetUserId,
+          to: currentTargetUserId,
           date,
           startTime,
           endTime,
@@ -687,7 +791,7 @@
         // Get user names from the users collection
         const [fromUserDoc, toUserDoc] = await Promise.all([
           db.collection("users").doc(currentUser.uid).get(),
-          db.collection("users").doc(targetUserId).get()
+          db.collection("users").doc(currentTargetUserId).get()
         ]);
         
         console.log('User documents retrieved:', {
@@ -701,15 +805,15 @@
           (currentUser.email || 'User ' + currentUser.uid.substring(0, 8));
         
         const toUserName = toUserDoc.exists ? 
-          (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + targetUserId.substring(0, 8)) : 
-          'User ' + targetUserId.substring(0, 8);
+          (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + currentTargetUserId.substring(0, 8)) : 
+          'User ' + currentTargetUserId.substring(0, 8);
 
         console.log('User names resolved:', { fromUserName, toUserName });
 
         // Create the swap with payment information
         const swapData = {
           from: currentUser.uid,
-          to: targetUserId,
+          to: currentTargetUserId,
           fromName: fromUserName,
           toName: toUserName,
           date: date,
@@ -734,7 +838,7 @@
         // Send a notification message to the recipient
         const messageData = {
           from: currentUser.uid,
-          to: targetUserId,
+          to: currentTargetUserId,
           fromName: fromUserName,
           toName: toUserName,
           text: `You have a pending swap request for ${date} at ${startTime}. Payment amount: $${paymentAmount}. Click here to view and respond.`,
@@ -749,11 +853,12 @@
         await db.collection("messages").add(messageData);
         console.log('Message created successfully');
 
+        alert('Swap request sent!');
         closeSwapModal();
         
         // Mock payment processing (replace with actual Stripe/PayPal integration)
         // Show payment processing modal
-        showPaymentProcessingModal(paymentAmount, swapRef.id, targetUserId, targetUserName);
+        showPaymentProcessingModal(paymentAmount, swapRef.id, currentTargetUserId, currentTargetUserName);
         
         // In a real implementation, you would:
         // 1. Redirect to Stripe/PayPal payment page
