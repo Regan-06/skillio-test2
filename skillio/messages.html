@@ -4,302 +4,111 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skillio Messages | skillio.site</title>
-  
-  <!-- Google Analytics -->
+
+  <!-- Google Analytics (replace ID in production) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX');
+    function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-XXXXXXXXXX');
   </script>
-  
+
+  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
   <style>
-    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #c9f2f5; color: #0f2027; padding: 30px; }
-    nav { background-color: #00bcd4; padding: 12px 20px; border-radius: 12px; margin-bottom: 30px;
+    :root{
+      --bg:#c9f2f5; --ink:#0f2027; --brand:#00bcd4; --brand-d:#0097a7; --card:#ffffff;
+      --muted:#666; --radius:12px; --shadow:0 8px 20px rgba(0, 188, 212, 0.2);
+    }
+    *{box-sizing:border-box}
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--ink); padding: 30px; }
+    nav { background-color: var(--brand); padding: 12px 20px; border-radius: var(--radius); margin-bottom: 30px;
           display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3); }
-    nav img { height: 100px; }
+    nav img { height: 64px; border-radius: 10px; display:block }
     .top-nav-links { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-    nav a { color: white; text-decoration: none; font-weight: bold; font-size: 1rem; transition: color 0.2s; }
-    nav a:hover { color: #e0f7fa; }
-    h1 { text-align: center; color: #00bcd4; margin-bottom: 10px; }
-    .note { text-align: center; margin-bottom: 30px; font-size: 1rem; color: #555;
-            background: #fff3cd; padding: 10px; border-radius: 10px; border: 1px solid #ffeeba; }
-    .conversations { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px;
-                     box-shadow: 0 8px 20px rgba(0, 188, 212, 0.2); }
-    .conversation { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex;
-                    align-items: center; gap: 15px; }
+    nav a { color: white; text-decoration: none; font-weight: bold; font-size: 1rem; transition: opacity 0.2s; }
+    nav a:hover { opacity: .9 }
+    h1 { text-align: center; color: var(--brand); margin: 6px 0 10px; }
+    .note { text-align: center; margin: 0 auto 22px; font-size: 0.95rem; color: #555; background: #fff3cd; padding: 10px; border-radius: 10px; border: 1px solid #ffeeba; max-width: 900px; }
+
+    .layout { display:grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 900px){ .layout{ grid-template-columns: 1fr; } }
+
+    .conversations { background: var(--card); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); min-height: 200px; }
+    .conversation { padding: 12px; border-radius: 10px; cursor: pointer; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; }
+    .conversation + .conversation { margin-top: 6px; }
     .conversation:hover { background-color: #f1fafd; }
-    .profile-pic { 
-      width: 40px; 
-      height: 40px; 
-      border-radius: 50%; 
-      object-fit: cover; 
-      object-position: center;
-      border: 2px solid #00bcd4; 
-      flex-shrink: 0;
-      display: block;
-    }
-    .messages { padding-left: 55px; display: none; animation: fadeIn 0.3s ease-in-out; }
-    .message-line { padding: 6px 0; }
-    .reply-box { display: flex; margin-top: 10px; flex-wrap: wrap; gap: 10px; }
-    .reply-box input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; min-width: 0; }
-    .reply-box button { padding: 8px 16px; background-color: #00bcd4; border: none; color: white; border-radius: 8px;
-                        cursor: pointer; font-size: 1rem; }
-    .reply-box button:hover { background-color: #0097a7; }
-    .swap-button {
-      background-color: #00bcd4;
-      color: white;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 8px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
+    .profile-pic { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: center; border: 2px solid var(--brand); flex-shrink: 0; display: block; }
+    .conversation small { color: var(--muted) }
 
-    /* iPhone-style Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
+    .chat { background: var(--card); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); min-height: 400px; }
+    #messages { max-height: 60vh; overflow-y: auto; padding: 6px; }
+    .message { margin-bottom: 12px; }
+    .bubble { padding: 10px 12px; border-radius: 12px; display: inline-block; max-width: 80%; }
+    .bubble.mine { background: #007bff; color: #fff; }
+    .bubble.their { background: #e9ecef; color: #111; }
+    .meta { font-size: 12px; color: var(--muted); margin-top: 4px }
+    .composer { display:flex; gap: 8px; margin-top: 10px; }
+    .composer input { flex:1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; font-size: 1rem; min-width: 0; }
+    .composer button { padding: 10px 16px; background-color: var(--brand); border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 1rem; }
+    .composer button:hover { background-color: var(--brand-d); }
 
-    .modal-content {
-      background-color: #fefefe;
-      margin: 5% auto;
-      padding: 0;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      max-height: 80vh;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      animation: modalSlideUp 0.3s ease-out;
-      overflow-y: auto;
-    }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin: 10px 0 4px; }
+    .pill { border:none; background:#e0f7fa; color:#006064; padding:8px 12px; border-radius: 999px; cursor:pointer; }
 
-    @keyframes modalSlideUp {
-      from { transform: translateY(100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+    .swap-button { background-color: var(--brand); color: white; padding: 8px 16px; border: none; border-radius: 8px; margin-top: 8px; cursor: pointer; }
 
-    .modal-header {
-      background: #00bcd4;
-      color: white;
-      padding: 20px;
-      border-radius: 12px 12px 0 0;
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
+    /* Modal */
+    .modal { display:none; position: fixed; z-index: 1000; inset: 0; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 420px; max-height: 80vh; box-shadow: 0 4px 20px rgba(0,0,0,0.3); overflow-y: auto; }
+    .modal-header { background: var(--brand); color: white; padding: 16px 20px; border-radius: 12px 12px 0 0; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 1; }
+    .modal-body { padding: 16px 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display:block; margin-bottom: 6px; font-weight: 600; }
+    .form-group input, .form-group select { width:100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    .modal-footer { padding: 14px 20px 18px; display: flex; gap: 10px; position: sticky; bottom: 0; background: #fff; border-top: 1px solid #eee; border-radius: 0 0 12px 12px; }
+    .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .btn-cancel { background:#f0f0f0; color:#666 }
+    .btn-cancel:hover { background:#e0e0e0 }
+    .btn-create { background: var(--brand); color:#fff }
+    .btn-create:hover { background: var(--brand-d) }
 
-    .modal-body {
-      padding: 20px;
-      max-height: 60vh;
-      overflow-y: auto;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-      color: #333;
-    }
-
-    .form-group input, .form-group textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-
-    .form-group textarea {
-      height: 80px;
-      resize: vertical;
-    }
-
-    .modal-footer {
-      padding: 20px;
-      display: flex;
-      gap: 10px;
-      position: sticky;
-      bottom: 0;
-      background: #fefefe;
-      border-top: 1px solid #eee;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .btn-cancel {
-      background-color: #f0f0f0;
-      color: #666;
-    }
-
-    .btn-cancel:hover {
-      background-color: #e0e0e0;
-    }
-
-    .btn-create {
-      background-color: #00bcd4;
-      color: white;
-    }
-
-    .btn-create:hover {
-      background-color: #0097a7;
-    }
-
-    .btn-create:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-
-    /* Custom Calendar Picker */
-    .calendar-picker {
-      position: relative;
-    }
-
-    .calendar-input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      box-sizing: border-box;
-      cursor: pointer;
-      background-color: white;
-    }
-
-    .calendar-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1001;
-      display: none;
-      margin-top: 4px;
-    }
-
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .calendar-nav {
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      padding: 4px 8px;
-      color: #00bcd4;
-    }
-
-    .calendar-nav:hover {
-      background-color: #f0f0f0;
-      border-radius: 4px;
-    }
-
-    .calendar-title {
-      font-weight: bold;
-      color: #333;
-    }
-
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 1px;
-      background-color: #eee;
-    }
-
-    .calendar-day-header {
-      background: #f8f8f8;
-      padding: 8px;
-      text-align: center;
-      font-size: 12px;
-      font-weight: bold;
-      color: #666;
-    }
-
-    .calendar-day {
-      background: white;
-      padding: 8px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background-color 0.2s;
-    }
-
-    .calendar-day:hover {
-      background-color: #f0f0f0;
-    }
-
-    .calendar-day.selected {
-      background-color: #00bcd4;
-      color: white;
-    }
-
-    .calendar-day.today {
-      background-color: #e3f2fd;
-      color: #00bcd4;
-      font-weight: bold;
-    }
-
-    .calendar-day.other-month {
-      color: #ccc;
-    }
-
-    .calendar-day.disabled {
-      color: #ccc;
-      cursor: not-allowed;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce){ *{ animation:none!important; transition:none!important } }
   </style>
 </head>
 <body>
   <nav>
-    <a href="main.html"><img src="skillio logo.png" alt="Skillio Logo" /></a>
+    <a href="main.html"><img src="skillio/skillio logo.png" alt="Skillio Logo" /></a>
     <div class="top-nav-links">
       <a href="profile.html">Profile</a>
-      <a href="messages.html">Messages</a>
-      <a href="#" onclick="firebase.auth().signOut().then(() => window.location.href='auth.html')">Logout</a>
+      <a href="messages.html" aria-current="page">Messages</a>
+      <a href="#" onclick="firebase.auth().signOut().then(()=>window.location.href='auth.html')">Logout</a>
     </div>
   </nav>
 
   <h1>Your Conversations</h1>
-  <p class="note">💬 Use messages to arrange free swaps, negotiate paid sessions, or ask about upcoming workshops.</p>
-  <div class="conversations" id="conversationList">Loading conversations...</div>
+  <p class="note">💬 Arrange swaps right here. Propose a time with one tap, or open the form for more details. Keep it simple!</p>
+
+  <div class="layout">
+    <aside class="conversations" id="conversationList">Loading conversations...</aside>
+    <section class="chat">
+      <div id="messages">Select a conversation to view messages</div>
+      <div class="actions" id="quickActions" style="display:none"></div>
+      <form class="composer" id="composer" style="display:none">
+        <input type="text" id="messageInput" placeholder="Type your message..." required />
+        <button type="submit" id="sendBtn">Send</button>
+      </form>
+      <button class="swap-button" id="swapBtn" style="display:none">Set Up Swap</button>
+    </section>
+  </div>
+
+  <!-- Modal root -->
+  <div class="modal" id="modalRoot"></div>
 
   <script>
+    // --- Firebase init ---
     const firebaseConfig = {
       apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
       authDomain: "skillio-b2f44.firebaseapp.com",
@@ -312,1173 +121,404 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
-    }
+    // --- Helpers ---
+    function makeConversationId(a,b){ return [a,b].sort().join('_'); }
+    function qs(q){ return document.querySelector(q); }
+    function getQueryParam(param){ const urlParams = new URLSearchParams(window.location.search); return urlParams.get(param); }
 
-    auth.onAuthStateChanged(async user => {
-      if (!user) return (window.location.href = 'auth.html');
-      const currentUserId = user.uid;
-      const conversationList = document.getElementById("conversationList");
+    // --- State ---
+    let currentUserId = null;
+    let currentUserData = null;
+    let currentConversationUserId = null;
+    let targetUserData = null;
+    let unsubscribeMessages = null;
+
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){ window.location.href = 'auth.html'; return; }
+      currentUserId = user.uid;
+      // load self
+      try{ const snap = await db.collection('users').doc(currentUserId).get(); currentUserData = snap.data()||{}; }catch(e){ console.warn(e); }
+      await loadConversationList();
+
       const targetUserId = getQueryParam('user');
-
-      if (targetUserId && targetUserId !== currentUserId) {
-        // Open direct conversation with target user
-        conversationList.innerHTML = '<p>Loading conversation...</p>';
-        
-        // Create messages container for the new system
-        const messagesContainer = document.createElement('div');
-        messagesContainer.id = 'messages';
-        messagesContainer.className = 'messages';
-        messagesContainer.style.display = 'block';
-        conversationList.innerHTML = '';
-        conversationList.appendChild(messagesContainer);
-        
-        // Load messages using the new system
-        loadMessages(targetUserId);
-      } else {
-        // Show all conversations
-        try {
-          const sent = await db.collection("messages").where("from", "==", currentUserId).get();
-          const received = await db.collection("messages").where("to", "==", currentUserId).get();
-          const userIds = new Set();
-          sent.docs.forEach(doc => userIds.add(doc.data().to));
-          received.docs.forEach(doc => userIds.add(doc.data().from));
-          
-          if (userIds.size === 0) {
-            conversationList.innerHTML = "<p>No conversations yet.</p>";
-            return;
-          }
-          
-          conversationList.innerHTML = "";
-          
-          // Process each conversation
-          for (const userId of userIds) {
-            let userName = 'User ' + userId.substring(0, 8);
-            let profilePic = '';
-            
-            try {
-              const userDoc = await db.collection('users').doc(userId).get();
-              if (userDoc.exists) {
-                const userData = userDoc.data();
-                userName = userData.displayName || userData.name || 'User ' + userId.substring(0, 8);
-                profilePic = userData.profilePic || '';
-              }
-            } catch (e) {
-              console.error('Error fetching user data for conversation list:', e);
-            }
-            
-            const convo = document.createElement("div");
-            convo.className = "conversation";
-            convo.innerHTML = `<img src="${profilePic || 'default_profile.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
-            
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "messages";
-            msgDiv.style.display = "none";
-            msgDiv.id = 'messages-' + userId; // Unique ID for each conversation
-            
-            convo.onclick = async () => {
-              // Hide all other message divs
-              document.querySelectorAll('.messages').forEach(div => {
-                div.style.display = 'none';
-              });
-              
-              // Show this conversation's messages
-              msgDiv.style.display = "block";
-              msgDiv.innerHTML = "<p>Loading chat...</p>";
-              
-              // Clear and set up for new system
-              msgDiv.innerHTML = '';
-              msgDiv.id = 'messages'; // Set the ID that loadMessages expects
-              
-              // Load messages using the new system
-              loadMessages(userId);
-            };
-            
-            conversationList.appendChild(convo);
-            conversationList.appendChild(msgDiv);
-          }
-        } catch (error) {
-          console.error('Error loading conversations:', error);
-          conversationList.innerHTML = "<p>Error loading conversations. Please refresh the page.</p>";
-        }
-      }
+      if(targetUserId && targetUserId !== currentUserId){ openConversation(targetUserId); }
     });
 
-    function sendMessage(event, toUserId, toUserName) {
-      event.preventDefault();
-      const form = event.target;
-      const message = form.message.value.trim();
-      if (!message) return;
+    async function loadConversationList(){
+      const listEl = qs('#conversationList');
+      listEl.innerHTML = 'Loading conversations...';
+      try{
+        // Find distinct partner IDs from messages where I am from OR to (limit by recent)
+        const recent = await db.collection('messages')
+          .where('participants', 'array-contains', currentUserId)
+          .orderBy('timestamp','desc').limit(100).get()
+          .catch(()=>null);
 
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) {
-        alert("You must be signed in to send messages.");
-        return;
-      }
-
-      db.collection("messages").add({
-        from: currentUser.uid,
-        fromName: currentUser.displayName || "Anonymous",
-        to: toUserId,
-        toName: toUserName,
-        message: message,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false
-      }).then(() => {
-        form.message.value = "";
-        window.location.href = "messages.html";
-      }).catch(error => {
-        console.error("Error sending message:", error);
-        alert("Error sending message. Try again.");
-      });
-    }
-
-    // Mark messages as read when displayed
-    function markMessagesAsRead(messages) {
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) return;
-      
-      console.log('Marking messages as read for user:', currentUser.uid);
-      console.log('Messages to check:', messages.length);
-      
-      const unreadMessages = messages.filter(m => 
-        m.to === currentUser.uid && (!m.read || m.read === false)
-      );
-      
-      console.log('Unread messages found:', unreadMessages.length);
-      
-      unreadMessages.forEach(msg => {
-        console.log('Marking message as read:', msg.id);
-        db.collection("messages").doc(msg.id).update({
-          read: true
-        }).then(() => {
-          console.log('Message marked as read successfully:', msg.id);
-        }).catch(error => {
-          console.error('Error marking message as read:', error);
-        });
-      });
-    }
-
-    // Calendar functionality
-    let currentCalendarDate = new Date();
-    let selectedDate = null;
-
-    function openCalendar() {
-      const dropdown = document.getElementById('calendarDropdown');
-      dropdown.style.display = 'block';
-      renderCalendar();
-    }
-
-    function closeCalendar() {
-      const dropdown = document.getElementById('calendarDropdown');
-      dropdown.style.display = 'none';
-    }
-
-    function renderCalendar() {
-      const year = currentCalendarDate.getFullYear();
-      const month = currentCalendarDate.getMonth();
-      
-      document.getElementById('calendarTitle').textContent = 
-        currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const startDate = new Date(firstDay);
-      startDate.setDate(startDate.getDate() - firstDay.getDay());
-      
-      const grid = document.getElementById('calendarGrid');
-      grid.innerHTML = '';
-      
-      // Add day headers
-      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
-        const header = document.createElement('div');
-        header.className = 'calendar-day-header';
-        header.textContent = day;
-        grid.appendChild(header);
-      });
-      
-      // Add calendar days
-      for (let i = 0; i < 42; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const dayElement = document.createElement('div');
-        dayElement.className = 'calendar-day';
-        dayElement.textContent = date.getDate();
-        
-        // Check if it's today
-        const today = new Date();
-        if (date.toDateString() === today.toDateString()) {
-          dayElement.classList.add('today');
-        }
-        
-        // Check if it's selected
-        if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
-          dayElement.classList.add('selected');
-        }
-        
-        // Check if it's in current month
-        if (date.getMonth() !== month) {
-          dayElement.classList.add('other-month');
-        }
-        
-        // Disable past dates
-        if (date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-          dayElement.classList.add('disabled');
+        const partners = new Map();
+        if(recent){
+          recent.forEach(doc=>{
+            const m = doc.data();
+            const other = (m.from === currentUserId) ? m.to : m.from;
+            if(!other) return;
+            if(!partners.has(other)) partners.set(other, m.timestamp?.toDate()?.getTime() || 0);
+          });
         } else {
-          dayElement.onclick = () => selectDate(date);
+          // Fallback if composite index missing: get from/to separately (less efficient)
+          const sent = await db.collection('messages').where('from','==', currentUserId).get();
+          const received = await db.collection('messages').where('to','==', currentUserId).get();
+          sent.docs.forEach(d=> partners.set(d.data().to, Date.now()));
+          received.docs.forEach(d=> partners.set(d.data().from, Date.now()));
         }
-        
-        grid.appendChild(dayElement);
+
+        if(partners.size === 0){ listEl.innerHTML = '<p>No conversations yet.</p>'; return; }
+        listEl.innerHTML = '';
+
+        // Render each partner card
+        for(const [userId] of partners){
+          let userName = 'User ' + userId.substring(0,8);
+          let profilePic = 'default_profile.jpg';
+          try{
+            const udoc = await db.collection('users').doc(userId).get();
+            if(udoc.exists){ const u = udoc.data(); userName = u.displayName || u.name || userName; profilePic = u.profilePic || profilePic; }
+          }catch(e){ console.warn('user fetch', e); }
+
+          const row = document.createElement('div');
+          row.className = 'conversation';
+          row.innerHTML = `<img src="${profilePic}" class="profile-pic" alt="${userName}"><div><strong>${userName}</strong><br><small>Click to open chat</small></div>`;
+          row.onclick = ()=> openConversation(userId);
+          listEl.appendChild(row);
+        }
+      }catch(err){
+        console.error('loadConversationList', err); listEl.innerHTML = '<p>Error loading conversations.</p>';
       }
     }
 
-    function selectDate(date) {
-      selectedDate = date;
-      document.getElementById('swapDate').value = date.toISOString().split('T')[0];
-      closeCalendar();
+    async function openConversation(targetUserId){
+      currentConversationUserId = targetUserId;
+      const messagesEl = qs('#messages');
+      const quickEl = qs('#quickActions');
+      const composerEl = qs('#composer');
+      const swapBtn = qs('#swapBtn');
+
+      messagesEl.innerHTML = 'Loading chat...';
+      quickEl.style.display = 'none';
+      composerEl.style.display = 'none';
+      swapBtn.style.display = 'none';
+
+      // load target user data
+      try{
+        const tdoc = await db.collection('users').doc(targetUserId).get();
+        targetUserData = tdoc.data()||{};
+      }catch(e){ targetUserData = {}; }
+
+      const convoId = makeConversationId(currentUserId, targetUserId);
+
+      // Unsubscribe previous listener
+      if(unsubscribeMessages) unsubscribeMessages();
+
+      unsubscribeMessages = db.collection('messages')
+        .where('conversationId','==', convoId)
+        .orderBy('timestamp','asc')
+        .onSnapshot(async snap=>{
+          const msgs = [];
+          for(const doc of snap.docs){
+            const data = { id: doc.id, ...doc.data() };
+            if(data.type === 'swap_request' && data.swapId){
+              try{ const sdoc = await db.collection('swaps').doc(data.swapId).get(); if(sdoc.exists) data.swapData = sdoc.data(); }catch(e){ console.warn(e); }
+            }
+            msgs.push(data);
+          }
+          renderConversation(messagesEl, msgs);
+          markMessagesAsRead(msgs.filter(m=> m.to === currentUserId && !m.read));
+
+          // Show quick actions & composer
+          renderQuickActions(quickEl); quickEl.style.display = 'flex';
+          setupComposer(composerEl); composerEl.style.display = 'flex';
+          swapBtn.onclick = ()=> openSwapModal(targetUserId, targetUserData.displayName || targetUserData.name || ('User ' + targetUserId.substring(0,8)));
+          swapBtn.style.display = 'inline-block';
+        }, err=>{
+          console.error('onSnapshot', err); messagesEl.innerHTML = '<div style="color:red">Error loading messages</div>';
+        });
     }
 
-    function previousMonth() {
-      currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-      renderCalendar();
+    function renderConversation(container, messages){
+      container.innerHTML = '';
+      const myPic = currentUserData?.profilePic || 'default_profile.jpg';
+      const theirPic = targetUserData?.profilePic || 'default_profile.jpg';
+      const theirName = targetUserData?.displayName || targetUserData?.name || 'User';
+      const myName = currentUserData?.displayName || currentUserData?.name || 'You';
+
+      messages.forEach(m=>{
+        const wrap = document.createElement('div'); wrap.className = 'message';
+        if(m.type === 'swap_request'){
+          wrap.appendChild(renderSwapCard(m));
+        }else if(m.type === 'swap_response'){
+          const bg = (m.response === 'accepted') ? '#d4edda' : '#f8d7da';
+          const border = (m.response === 'accepted') ? '#c3e6cb' : '#f5c6cb';
+          wrap.innerHTML = `
+            <div style="background:${bg}; border:1px solid ${border}; border-radius:10px; padding:12px;">
+              <strong>Swap ${m.response === 'accepted' ? 'Accepted' : 'Declined'}</strong>
+              <div class="meta">${m.timestamp ? new Date(m.timestamp.toDate()).toLocaleString() : ''}</div>
+              <div style="margin-top:6px">${m.text || ''}</div>
+            </div>`;
+        }else{
+          const mine = m.from === currentUserId;
+          wrap.innerHTML = `
+            <div style="display:flex; align-items:flex-start; gap:10px; ${mine?'flex-direction:row-reverse':''}">
+              <img src="${mine?myPic:theirPic}" alt="avatar" class="profile-pic" style="width:40px;height:40px;border:0"/>
+              <div>
+                <div class="bubble ${mine?'mine':'their'}">${(m.text || m.message || '').replace(/</g,'&lt;')}</div>
+                <div class="meta">${mine?myName:theirName} · ${m.timestamp? new Date(m.timestamp.toDate()).toLocaleString():''}</div>
+              </div>
+            </div>`;
+        }
+        container.appendChild(wrap);
+      });
+      container.scrollTop = container.scrollHeight;
     }
 
-    function nextMonth() {
-      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-      renderCalendar();
+    function renderSwapCard(message){
+      const s = message.swapData || {};
+      const start = s.startTime?.toDate ? s.startTime.toDate() : null;
+      const minutes = s.duration_mins || 60;
+      const paid = s.swap_type === 'paid';
+      const price = (s.price_cents||0)/100;
+      const status = s.status || 'proposed';
+      const canRespond = (s.to === currentUserId && status === 'proposed');
+      const canComplete = (status === 'confirmed' && start && new Date() >= start);
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#f8f9fa;border:1px solid #e9ecef;border-radius:10px;padding:12px;';
+      card.setAttribute('data-swap-id', message.swapId);
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong>Swap Request ${paid?`- $${price}`:''}</strong>
+          <span class="meta">${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : ''}</span>
+        </div>
+        <div style="margin-bottom:8px; line-height:1.5">
+          <div><strong>What:</strong> ${s.description || 'Session'}</div>
+          <div><strong>When:</strong> ${start? start.toLocaleString(): '—'} (${minutes} min)</div>
+          <div><strong>Mode:</strong> ${s.mode === 'in_person' ? `In person${s.location? ' · '+s.location:''}` : 'Online'}</div>
+          <div><strong>Status:</strong> ${status}</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${canRespond ? `
+            <button onclick="respondToSwap('${message.swapId}','accepted')" class="pill" style="background:#28a745;color:#fff">Accept</button>
+            <button onclick="respondToSwap('${message.swapId}','declined')" class="pill" style="background:#dc3545;color:#fff">Decline</button>
+            <button onclick="suggestAnotherTime('${message.swapId}','${s.from}','${s.fromName||''}')" class="pill">Suggest another time</button>
+          `: ''}
+          ${canComplete ? `
+            <button onclick="completeSwap('${message.swapId}')" class="pill" style="background:#28a745;color:#fff">Mark completed</button>
+            <button onclick="flagNoShow('${message.swapId}')" class="pill" style="background:#ff7043;color:#fff">Didn’t happen</button>
+          `: ''}
+        </div>
+      `;
+      return card;
     }
 
-    // Close calendar when clicking outside
-    document.addEventListener('click', function(event) {
-      const calendar = document.querySelector('.calendar-picker');
-      if (calendar && !calendar.contains(event.target)) {
-        closeCalendar();
-      }
-    });
+    function renderQuickActions(container){
+      container.innerHTML = '';
+      const opts = buildQuickTimes();
+      opts.forEach(opt=>{
+        const b = document.createElement('button');
+        b.className = 'pill'; b.type = 'button'; b.textContent = opt.label;
+        b.onclick = ()=>{ openSwapModal(currentConversationUserId, targetUserData?.displayName||targetUserData?.name||'User');
+          // Prefill
+          qs('#swapDate').value = opt.date; qs('#swapStartTime').value = opt.start; qs('#swapDuration').value = String(opt.minutes);
+          qs('#swapDescription').value = 'Skill swap session'; };
+        container.appendChild(b);
+      });
+    }
 
-    // iPhone-style Swap Modal
-    function openSwapModal(targetUserId, targetUserName) {
-      const modal = document.createElement('div');
-      modal.className = 'modal';
-      modal.style.display = 'block';
-      
+    function buildQuickTimes(){
+      const out = []; const now = new Date();
+      const plus1 = new Date(now.getTime()+60*60*1000);
+      if(plus1.getHours() < 21){ out.push({ label:`Today ${plus1.toTimeString().slice(0,5)}`, date: plus1.toISOString().split('T')[0], start: plus1.toTimeString().slice(0,5), minutes:60 }); }
+      const t = new Date(now); t.setDate(t.getDate()+1); t.setHours(18,0,0,0);
+      out.push({ label:`Tomorrow 18:00`, date: t.toISOString().split('T')[0], start:'18:00', minutes:60 });
+      const sat = new Date(now); sat.setDate(now.getDate()+((6-now.getDay()+7)%7||7)); sat.setHours(10,0,0,0);
+      out.push({ label:`${sat.toLocaleDateString(undefined,{weekday:'short'})} 10:00`, date: sat.toISOString().split('T')[0], start:'10:00', minutes:60 });
+      return out;
+    }
+
+    function setupComposer(formEl){
+      const input = qs('#messageInput'); const send = qs('#sendBtn');
+      formEl.onsubmit = (e)=>{
+        e.preventDefault(); const text = input.value.trim(); if(!text) return; send.disabled = true;
+        const convoId = makeConversationId(currentUserId, currentConversationUserId);
+        const toName = targetUserData?.displayName || targetUserData?.name || 'User';
+        const fromName = currentUserData?.displayName || currentUserData?.name || 'You';
+        db.collection('messages').add({
+          conversationId: convoId,
+          participants: [currentUserId, currentConversationUserId],
+          from: currentUserId, to: currentConversationUserId, fromName, toName,
+          text, timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false
+        }).then(()=>{ input.value=''; send.disabled=false; input.focus(); })
+          .catch(err=>{ console.error(err); send.disabled=false; alert('Failed to send'); });
+      };
+    }
+
+    async function markMessagesAsRead(msgs){
+      const batch = db.batch();
+      msgs.forEach(m=>{ const ref = db.collection('messages').doc(m.id); batch.update(ref, { read:true }); });
+      try{ await batch.commit(); }catch(e){ console.warn('mark read', e); }
+    }
+
+    // --- Swap modal (lightweight) ---
+    function openSwapModal(targetUserId, targetUserName){
+      const modal = qs('#modalRoot'); modal.style.display = 'block';
       modal.innerHTML = `
         <div class="modal-content">
-          <div class="modal-header">
-            Create Swap with ${targetUserName}
-          </div>
+          <div class="modal-header">Propose a Swap with ${targetUserName}</div>
           <div class="modal-body">
             <form id="swapForm">
               <div class="form-group">
-                <label for="swapDate">Date:</label>
-                <input type="date" id="swapDate" required>
+                <label for="swapDescription">What will you swap?</label>
+                <input id="swapDescription" type="text" placeholder="e.g., Teach beginner guitar ↔ Learn basic cooking" required />
               </div>
               <div class="form-group">
-                <label for="swapStartTime">Start Time:</label>
-                <input type="time" id="swapStartTime" required>
+                <label for="swapDate">Date</label>
+                <input type="date" id="swapDate" required />
+              </div>
+              <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1">
+                  <label for="swapStartTime">Start Time</label>
+                  <input type="time" id="swapStartTime" required />
+                </div>
+                <div class="form-group" style="flex:1">
+                  <label for="swapDuration">Duration</label>
+                  <select id="swapDuration" required>
+                    <option value="30">30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60" selected>60 min</option>
+                  </select>
+                </div>
               </div>
               <div class="form-group">
-                <label for="swapEndTime">End Time:</label>
-                <input type="time" id="swapEndTime" required>
-              </div>
-              <div class="form-group">
-                <label for="swapLocation">Location:</label>
-                <input type="text" id="swapLocation" placeholder="Where will this swap take place?">
-              </div>
-              <div class="form-group">
-                <label for="swapDescription">Description:</label>
-                <textarea id="swapDescription" placeholder="What skills will be exchanged?"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="paymentAmount">Payment Amount ($):</label>
-                <input type="number" id="paymentAmount" min="0" step="0.01" placeholder="0.00" required>
-              </div>
-              <div class="form-group">
-                <label for="paymentMethod">Payment Method:</label>
-                <select id="paymentMethod" required>
-                  <option value="">Select payment method</option>
-                  <option value="stripe">Credit/Debit Card</option>
-                  <option value="paypal">PayPal</option>
+                <label for="swapMode">Mode</label>
+                <select id="swapMode" required>
+                  <option value="online" selected>Online (link in chat)</option>
+                  <option value="in_person">In person</option>
                 </select>
               </div>
+              <div class="form-group" id="locationGroup" style="display:none">
+                <label for="swapLocation">Location (if in person)</label>
+                <input type="text" id="swapLocation" placeholder="Cafe on Queen St" />
+              </div>
               <div class="form-group">
-                <label>
-                  <input type="checkbox" id="paymentTerms" required>
-                  I agree to pay the specified amount upfront. Payment will be held until both parties confirm completion or 48 hours pass.
-                </label>
+                <label>Balance</label>
+                <div style="display:flex; gap:10px;">
+                  <label><input type="radio" name="swapType" value="reciprocal" checked /> Balanced (free)</label>
+                  <label><input type="radio" name="swapType" value="paid" /> Paid</label>
+                </div>
+              </div>
+              <div class="form-group" id="priceGroup" style="display:none">
+                <label for="paymentAmount">Price (USD)</label>
+                <input type="number" id="paymentAmount" min="5" step="1" placeholder="20" />
               </div>
             </form>
           </div>
           <div class="modal-footer">
             <button class="btn btn-cancel" onclick="closeSwapModal()">Cancel</button>
-            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Create Swap & Pay</button>
+            <button class="btn btn-create" onclick="createSwap('${targetUserId}', '${targetUserName}')">Send Proposal</button>
           </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      // Set default date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      selectedDate = tomorrow;
-      document.getElementById('swapDate').value = tomorrow.toISOString().split('T')[0];
-      
-      // Set default time to current time + 1 hour
-      const now = new Date();
-      now.setHours(now.getHours() + 1);
-      document.getElementById('swapStartTime').value = now.toTimeString().slice(0, 5);
-      now.setHours(now.getHours() + 1);
-      document.getElementById('swapEndTime').value = now.toTimeString().slice(0, 5);
+        </div>`;
+
+      // Defaults
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+      qs('#swapDate').value = tomorrow.toISOString().split('T')[0];
+      const now = new Date(); now.setHours(now.getHours()+1,0,0,0);
+      qs('#swapStartTime').value = now.toTimeString().slice(0,5);
+
+      const modeEl = qs('#swapMode'); const locationGroup = qs('#locationGroup');
+      modeEl.addEventListener('change', ()=>{ locationGroup.style.display = modeEl.value==='in_person' ? 'block' : 'none'; });
+      document.querySelectorAll('input[name="swapType"]').forEach(r=> r.addEventListener('change', ()=>{
+        qs('#priceGroup').style.display = (document.querySelector('input[name="swapType"]:checked').value==='paid') ? 'block' : 'none';
+      }));
+    }
+    function closeSwapModal(){ const modal = qs('#modalRoot'); modal.style.display='none'; modal.innerHTML = ''; }
+
+    async function createSwap(targetUserId, targetUserName){
+      const user = auth.currentUser; if(!user){ alert('Sign in to create a swap.'); return; }
+      const date = qs('#swapDate').value;
+      const startTime = qs('#swapStartTime').value;
+      const minutes = parseInt(qs('#swapDuration').value,10);
+      const mode = qs('#swapMode').value;
+      const location = qs('#swapLocation')?.value || '';
+      const description = qs('#swapDescription').value.trim();
+      const swapType = document.querySelector('input[name="swapType"]:checked').value;
+      const priceUSD = swapType==='paid' ? parseInt((qs('#paymentAmount').value||'0'),10) : 0;
+      if(!date || !startTime || !minutes || !description){ alert('Please complete all required fields.'); return; }
+      const startISO = new Date(`${date}T${startTime}:00`); const endISO = new Date(startISO.getTime()+minutes*60000);
+
+      // Names
+      const [fromDoc,toDoc] = await Promise.all([
+        db.collection('users').doc(user.uid).get(), db.collection('users').doc(targetUserId).get()
+      ]);
+      const fromName = fromDoc.exists ? (fromDoc.data().displayName || fromDoc.data().name || user.email) : (user.email || 'User');
+      const toName = toDoc.exists ? (toDoc.data().displayName || toDoc.data().name || 'User') : 'User';
+
+      // Create swap
+      const swapRef = await db.collection('swaps').add({
+        from: user.uid, to: targetUserId, fromName, toName,
+        description, mode, location,
+        startTime: firebase.firestore.Timestamp.fromDate(startISO),
+        endTime: firebase.firestore.Timestamp.fromDate(endISO),
+        duration_mins: minutes,
+        swap_type: swapType,
+        price_cents: priceUSD? priceUSD*100 : 0,
+        status: 'proposed', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Notify in chat
+      const convoId = makeConversationId(user.uid, targetUserId);
+      await db.collection('messages').add({
+        conversationId: convoId,
+        participants: [user.uid, targetUserId],
+        from: user.uid, to: targetUserId, fromName, toName,
+        type: 'swap_request', swapId: swapRef.id,
+        text: `Proposed: ${description} on ${startISO.toLocaleString()} (${minutes} min, ${mode==='online'?'online':(location||'in person')})`,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(), read:false
+      });
+
+      closeSwapModal(); alert('Swap proposal sent!');
     }
 
-    function closeSwapModal() {
-      const modal = document.querySelector('.modal');
-      if (modal) {
-        modal.remove();
-      }
+    // --- Swap responses ---
+    async function respondToSwap(swapId, response){
+      const user = auth.currentUser; if(!user) return;
+      const ref = db.collection('swaps').doc(swapId); const doc = await ref.get(); if(!doc.exists){ alert('Swap not found.'); return; }
+      const s = doc.data(); if(s.to !== user.uid){ alert('Only the recipient can respond.'); return; }
+      if(s.status !== 'proposed'){ alert('This swap was already handled.'); return; }
+      const newStatus = (response === 'accepted') ? 'confirmed' : 'declined';
+      await ref.update({ status: newStatus, respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await db.collection('messages').add({
+        conversationId: makeConversationId(s.from, s.to),
+        participants:[s.from, s.to],
+        from: user.uid, to: s.from,
+        fromName: s.toName, toName: s.fromName,
+        type:'swap_response', swapId,
+        response,
+        text: `Your swap request for ${s.description} on ${s.startTime.toDate().toLocaleString()} was ${response}.`,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(), read:false
+      });
+      alert(`Swap ${response}.`);
     }
 
-    async function createSwap(targetUserId, targetUserName) {
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) {
-        alert('You must be signed in to create a swap.');
-        return;
-      }
-
-      const date = document.getElementById('swapDate').value;
-      const startTime = document.getElementById('swapStartTime').value;
-      const endTime = document.getElementById('swapEndTime').value;
-      const location = document.getElementById('swapLocation').value;
-      const description = document.getElementById('swapDescription').value;
-      const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
-      const paymentMethod = document.getElementById('paymentMethod').value;
-      const paymentTerms = document.getElementById('paymentTerms').checked;
-
-      if (!date || !startTime || !endTime || !paymentAmount || !paymentMethod || !paymentTerms) {
-        alert('Please fill in all required fields.');
-        return;
-      }
-
-      if (startTime >= endTime) {
-        alert('End time must be after start time.');
-        return;
-      }
-
-      if (paymentAmount < 0) {
-        alert('Payment amount must be positive.');
-        return;
-      }
-
-      try {
-        console.log('Creating swap with data:', {
-          from: currentUser.uid,
-          to: targetUserId,
-          date,
-          startTime,
-          endTime,
-          paymentAmount,
-          paymentMethod
-        });
-
-        // Get user names from the users collection
-        const [fromUserDoc, toUserDoc] = await Promise.all([
-          db.collection("users").doc(currentUser.uid).get(),
-          db.collection("users").doc(targetUserId).get()
-        ]);
-        
-        console.log('User documents retrieved:', {
-          fromUserExists: fromUserDoc.exists,
-          toUserExists: toUserDoc.exists
-        });
-        
-        // Try to get names from various possible fields
-        const fromUserName = fromUserDoc.exists ? 
-          (fromUserDoc.data().displayName || fromUserDoc.data().name || currentUser.email || 'User ' + currentUser.uid.substring(0, 8)) : 
-          (currentUser.email || 'User ' + currentUser.uid.substring(0, 8));
-        
-        const toUserName = toUserDoc.exists ? 
-          (toUserDoc.data().displayName || toUserDoc.data().name || 'User ' + targetUserId.substring(0, 8)) : 
-          'User ' + targetUserId.substring(0, 8);
-
-        console.log('User names resolved:', { fromUserName, toUserName });
-
-        // Create the swap with payment information
-        const swapData = {
-          from: currentUser.uid,
-          to: targetUserId,
-          fromName: fromUserName,
-          toName: toUserName,
-          date: date,
-          startTime: startTime,
-          endTime: endTime,
-          location: location || '',
-          description: description || 'Swap session',
-          paymentAmount: paymentAmount,
-          paymentMethod: paymentMethod,
-          paymentStatus: 'pending', // 'pending', 'paid', 'released', 'refunded'
-          escrowId: `escrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          status: 'pending_payment', // 'pending_payment', 'paid', 'completed', 'cancelled'
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          paymentDue: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours from now
-          autoReleaseTime: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 48 * 60 * 60 * 1000)) // 48 hours from now
-        };
-
-        console.log('Creating swap with data:', swapData);
-        const swapRef = await db.collection("swaps").add(swapData);
-        console.log('Swap created successfully with ID:', swapRef.id);
-
-        // Send a notification message to the recipient
-        const messageData = {
-          from: currentUser.uid,
-          to: targetUserId,
-          fromName: fromUserName,
-          toName: toUserName,
-          text: `You have a pending swap request for ${date} at ${startTime}. Payment amount: $${paymentAmount}. Click here to view and respond.`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'swap_request',
-          swapId: swapRef.id,
-          paymentAmount: paymentAmount,
-          read: false
-        };
-
-        console.log('Creating message with data:', messageData);
-        await db.collection("messages").add(messageData);
-        console.log('Message created successfully');
-
-        closeSwapModal();
-        
-        // Mock payment processing (replace with actual Stripe/PayPal integration)
-        // Show payment processing modal
-        showPaymentProcessingModal(paymentAmount, swapRef.id, targetUserId, targetUserName);
-        
-        // In a real implementation, you would:
-        // 1. Redirect to Stripe/PayPal payment page
-        // 2. Process payment and hold in escrow
-        // 3. Update paymentStatus to 'paid' when payment succeeds
-        // 4. Send confirmation to both users
-        
-      } catch (error) {
-        console.error('Error creating swap:', error);
-        console.error('Error details:', {
-          message: error.message,
-          code: error.code,
-          stack: error.stack
-        });
-        alert('Error creating swap. Please try again. Error: ' + error.message);
-      }
-    }
-
-    // Mock payment processing modal
-    function showPaymentProcessingModal(amount, swapId, targetUserId, targetUserName) {
-      const modal = document.createElement('div');
-      modal.className = 'modal';
-      modal.style.display = 'block';
-      
-      modal.innerHTML = `
-        <div class="modal-content">
-          <div class="modal-header">
-            Payment Processing
-          </div>
-          <div class="modal-body">
-            <div style="text-align: center; padding: 20px;">
-              <div style="font-size: 48px; margin-bottom: 16px;">💳</div>
-              <h3 style="color: #00bcd4; margin-bottom: 16px;">Processing Payment</h3>
-              <p style="margin-bottom: 20px;">Amount: <strong>$${amount}</strong></p>
-              <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin: 0; font-size: 14px; color: #666;">
-                  <strong>Mock Payment Details:</strong><br>
-                  • Payment Method: Credit Card<br>
-                  • Status: Processing<br>
-                  • Escrow: Active<br>
-                  • Auto-release: 48 hours after completion
-                </p>
-              </div>
-              <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn btn-create" onclick="simulatePaymentSuccess('${swapId}', ${amount}, '${targetUserId}', '${targetUserName}')">
-                  Simulate Payment Success
-                </button>
-                <button class="btn btn-cancel" onclick="simulatePaymentFailure('${swapId}')">
-                  Simulate Payment Failure
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-    }
-
-
-
-    // Simulate successful payment
-    async function simulatePaymentSuccess(swapId, amount, targetUserId, targetUserName) {
-      try {
-        console.log('Processing payment success for swap:', swapId);
-        
-        // Update swap with payment success
-        await db.collection("swaps").doc(swapId).update({
-          paymentStatus: 'paid',
-          paymentProcessedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          mockPayment: true // Flag to identify mock payments
-        });
-
-        console.log('Swap payment status updated to paid');
-
-        // Send payment confirmation message
-        const currentUser = firebase.auth().currentUser;
-        await db.collection("messages").add({
-          from: 'system',
-          to: currentUser.uid,
-          fromName: 'Skillio Payment System',
-          toName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
-          text: `Payment of $${amount} processed successfully for swap #${swapId.substring(0, 8)}. Payment is held in escrow until swap completion.`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'payment_confirmation',
-          swapId: swapId,
-          read: false
-        });
-
-        // Send notification to recipient
-        await db.collection("messages").add({
-          from: 'system',
-          to: targetUserId,
-          fromName: 'Skillio Payment System',
-          toName: targetUserName,
-          text: `Payment of $${amount} has been made for your swap #${swapId.substring(0, 8)}. The payment is held in escrow until swap completion.`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'payment_notification',
-          swapId: swapId,
-          read: false
-        });
-
-        console.log('Payment confirmation messages sent');
-
-        closeModal();
-        alert(`Payment of $${amount} processed successfully! The swap is now active and payment is held in escrow.`);
-        
-        // Reload messages to show updated swap status
-        if (currentConversation) {
-          loadMessages(currentConversation);
+    function suggestAnotherTime(swapId, otherUserId, otherUserName){
+      openSwapModal(otherUserId, otherUserName||'User');
+      // preload existing details
+      db.collection('swaps').doc(swapId).get().then(doc=>{
+        if(doc.exists){ const s=doc.data();
+          if(s.description) qs('#swapDescription').value = s.description;
+          if(s.mode){ qs('#swapMode').value = s.mode; if(s.mode==='in_person'){ qs('#locationGroup').style.display='block'; qs('#swapLocation').value = s.location||''; }}
         }
-        
-      } catch (error) {
-        console.error('Error processing payment:', error);
-        alert('Error processing payment. Please try again.');
-      }
+      });
     }
 
-    // Simulate failed payment
-    async function simulatePaymentFailure(swapId) {
-      try {
-        // Update swap with payment failure
-        await db.collection("swaps").doc(swapId).update({
-          paymentStatus: 'failed',
-          status: 'cancelled',
-          paymentFailedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        closeModal();
-        alert('Payment failed. The swap has been cancelled. Please try again with a different payment method.');
-        
-      } catch (error) {
-        console.error('Error handling payment failure:', error);
-        alert('Error handling payment failure. Please try again.');
-      }
-    }
-
-    function closeModal() {
-      const modal = document.querySelector('.modal');
-      if (modal) {
-        modal.remove();
-      }
-    }
-
-    // New: Function to handle swap responses
-    async function respondToSwap(swapId, response) {
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) return;
-
-      try {
-        const swapRef = db.collection("swaps").doc(swapId);
-        const swapDoc = await swapRef.get();
-        
-        if (!swapDoc.exists) {
-          alert('Swap not found.');
-          return;
-        }
-
-        const swapData = swapDoc.data();
-        
-        if (swapData.to !== currentUser.uid) {
-          alert('You can only respond to swaps sent to you.');
-          return;
-        }
-
-        if (swapData.status !== 'pending') {
-          alert('This swap has already been responded to.');
-          return;
-        }
-
-        // Update swap status
-        await swapRef.update({
-          status: response, // 'accepted' or 'declined'
-          respondedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // Send notification back to the original sender
-        await db.collection("messages").add({
-          from: currentUser.uid,
-          to: swapData.from,
-          fromName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
-          toName: swapData.fromName,
-          text: `Your swap request for ${swapData.date} has been ${response}.`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'swap_response',
-          swapId: swapId,
-          response: response,
-          read: false
-        });
-
-        // Remove the swap request message from the display
-        const messagesContainer = document.getElementById('messages');
-        if (messagesContainer) {
-          const swapRequestElement = messagesContainer.querySelector(`[data-swap-id="${swapId}"]`);
-          if (swapRequestElement) {
-            swapRequestElement.remove();
-          }
-        }
-
-        alert(`Swap ${response}!`);
-        
-        // Refresh the conversation to show the response message
-        if (currentConversation) {
-          loadMessages(currentConversation);
-        }
-      } catch (error) {
-        console.error('Error responding to swap:', error);
-        alert('Error responding to swap. Please try again.');
-      }
-    }
-
-    // New: Function to display swap requests in messages
-    function displaySwapRequest(message) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message';
-      messageDiv.setAttribute('data-swap-id', message.swapId);
-      messageDiv.style.marginBottom = '15px';
-      messageDiv.style.padding = '15px';
-      messageDiv.style.backgroundColor = '#f8f9fa';
-      messageDiv.style.borderRadius = '8px';
-      messageDiv.style.border = '1px solid #e9ecef';
-
-      const swapData = message.swapData;
-      const paymentAmount = message.paymentAmount || swapData?.paymentAmount || 0;
-      const paymentStatus = swapData?.paymentStatus || 'pending';
-      const swapStatus = swapData?.status || 'pending_payment';
-      
-      // Determine status color and text
-      let statusColor = '#6c757d';
-      let statusText = 'Pending Payment';
-      
-      if (paymentStatus === 'paid') {
-        statusColor = '#28a745';
-        statusText = 'Payment Received';
-      } else if (paymentStatus === 'released') {
-        statusColor = '#17a2b8';
-        statusText = 'Payment Released';
-      } else if (paymentStatus === 'failed') {
-        statusColor = '#dc3545';
-        statusText = 'Payment Failed';
-      }
-      
-      messageDiv.innerHTML = `
-        <div style="margin-bottom: 10px;">
-          <strong>Swap Request - $${paymentAmount}</strong>
-          <span style="float: right; color: #666; font-size: 12px;">
-            ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
-          </span>
-        </div>
-        <div style="margin-bottom: 10px;">
-          <strong>Date:</strong> ${swapData?.date || 'Loading...'}<br>
-          <strong>Time:</strong> ${swapData?.startTime || ''} - ${swapData?.endTime || ''}<br>
-          <strong>Location:</strong> ${swapData?.location || 'Not specified'}<br>
-          <strong>Description:</strong> ${swapData?.description || 'No description'}<br>
-          <strong>Payment:</strong> $${paymentAmount} (held in escrow)
-        </div>
-        <div style="margin-bottom: 10px; font-size: 12px; color: #666;">
-          <strong>Payment Status:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span><br>
-          <strong>Swap Status:</strong> ${swapStatus}<br>
-          <strong>Auto-release:</strong> ${swapData?.autoReleaseTime ? new Date(swapData.autoReleaseTime.toDate()).toLocaleString() : 'Not set'}
-        </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          ${paymentStatus === 'paid' ? `
-            <button onclick="respondToSwap('${message.swapId}', 'accepted')" 
-                    style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-              Accept
-            </button>
-            <button onclick="respondToSwap('${message.swapId}', 'declined')" 
-                    style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-              Decline
-            </button>
-          ` : `
-            <button onclick="simulatePaymentSuccess('${message.swapId}', ${paymentAmount}, '${swapData?.to || ''}', '${swapData?.toName || ''}')" 
-                    style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-              Simulate Payment
-            </button>
-          `}
-          <button onclick="openDisputeForm('${message.swapId}', ${JSON.stringify(swapData)})" 
-                  style="background: #ffc107; color: #212529; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-            Dispute
-          </button>
-          ${paymentStatus === 'paid' ? `
-            <button onclick="simulatePaymentRelease('${message.swapId}')" 
-                    style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-              Release Payment
-            </button>
-          ` : ''}
-        </div>
-      `;
-
-      return messageDiv;
-    }
-
-    // New: Function to display swap responses
-    function displaySwapResponse(message) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message';
-      messageDiv.style.marginBottom = '15px';
-      messageDiv.style.padding = '15px';
-      messageDiv.style.backgroundColor = message.response === 'accepted' ? '#d4edda' : '#f8d7da';
-      messageDiv.style.borderRadius = '8px';
-      messageDiv.style.border = `1px solid ${message.response === 'accepted' ? '#c3e6cb' : '#f5c6cb'}`;
-
-      messageDiv.innerHTML = `
-        <div style="margin-bottom: 10px;">
-          <strong>Swap ${message.response === 'accepted' ? 'Accepted' : 'Declined'}</strong>
-          <span style="float: right; color: #666; font-size: 12px;">
-            ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
-          </span>
-        </div>
-        <div>
-          ${message.text}
-        </div>
-      `;
-
-      return messageDiv;
-    }
-
-    // Function to open dispute form
-    function openDisputeForm(swapId, swapData) {
-      const modal = document.createElement('div');
-      modal.className = 'modal';
-      modal.style.display = 'block';
-      
-      modal.innerHTML = `
-        <div class="modal-content">
-          <div class="modal-header">
-            Dispute Form - Swap #${swapId.substring(0, 8)}
-          </div>
-          <div class="modal-body">
-            <form id="disputeForm">
-              <div class="form-group">
-                <label for="disputeReason">Reason for Dispute:</label>
-                <select id="disputeReason" required>
-                  <option value="">Select a reason</option>
-                  <option value="no_show">Other party didn't show up</option>
-                  <option value="poor_service">Poor quality service</option>
-                  <option value="wrong_service">Wrong service provided</option>
-                  <option value="safety_concern">Safety concern</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="disputeDescription">Detailed Description:</label>
-                <textarea id="disputeDescription" placeholder="Please describe what happened..." required></textarea>
-              </div>
-              <div class="form-group">
-                <label for="disputeEvidence">Evidence (optional):</label>
-                <input type="file" id="disputeEvidence" accept="image/*,.pdf,.doc,.docx">
-                <small>Upload screenshots, photos, or documents to support your claim</small>
-              </div>
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="disputeTerms" required>
-                  I confirm that the information provided is accurate and I understand this dispute will be reviewed by Skillio support.
-                </label>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-cancel" onclick="closeDisputeModal()">Cancel</button>
-            <button class="btn btn-create" onclick="submitDispute('${swapId}')">Submit Dispute</button>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-    }
-
-    function closeDisputeModal() {
-      const modal = document.querySelector('.modal');
-      if (modal) {
-        modal.remove();
-      }
-    }
-
-    async function submitDispute(swapId) {
-      const reason = document.getElementById('disputeReason').value;
-      const description = document.getElementById('disputeDescription').value;
-      const evidence = document.getElementById('disputeEvidence').files[0];
-      const terms = document.getElementById('disputeTerms').checked;
-
-      if (!reason || !description || !terms) {
-        alert('Please fill in all required fields.');
-        return;
-      }
-
-      try {
-        const currentUser = firebase.auth().currentUser;
-        
-        // Create dispute record
-        await db.collection("disputes").add({
-          swapId: swapId,
-          userId: currentUser.uid,
-          reason: reason,
-          description: description,
-          evidenceFile: evidence ? evidence.name : null,
-          status: 'pending', // 'pending', 'approved', 'rejected'
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // Update swap status
-        await db.collection("swaps").doc(swapId).update({
-          status: 'disputed',
-          disputeSubmittedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // Send notification message
-        await db.collection("messages").add({
-          from: currentUser.uid,
-          to: 'admin', // This would be the admin user ID
-          fromName: currentUser.displayName || currentUser.email || 'User ' + currentUser.uid.substring(0, 8),
-          toName: 'Skillio Support',
-          text: `Dispute submitted for swap #${swapId.substring(0, 8)}. Reason: ${reason}`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          type: 'dispute_notification',
-          swapId: swapId,
-          read: false
-        });
-
-        closeDisputeModal();
-        alert('Dispute submitted successfully. Our support team will review your case within 24-48 hours.');
-        
-      } catch (error) {
-        console.error('Error submitting dispute:', error);
-        alert('Error submitting dispute. Please try again.');
-      }
-    }
-
-    // Function to manually simulate payment release (for testing)
-    async function simulatePaymentRelease(swapId) {
-      try {
-        console.log('Manually releasing payment for swap:', swapId);
-        
-        const swapDoc = await db.collection("swaps").doc(swapId).get();
-        if (!swapDoc.exists) {
-          alert('Swap not found.');
-          return;
-        }
-
-        const swapData = swapDoc.data();
-        
-        // Update swap with payment release
-        await db.collection("swaps").doc(swapId).update({
-          paymentStatus: 'released',
-          manuallyReleasedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log('Payment status updated to released');
-
-        // Send notification to both users
-        await Promise.all([
-          db.collection("messages").add({
-            from: 'system',
-            to: swapData.from,
-            fromName: 'Skillio System',
-            toName: swapData.fromName,
-            text: `Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            type: 'payment_released',
-            read: false
-          }),
-          db.collection("messages").add({
-            from: 'system',
-            to: swapData.to,
-            fromName: 'Skillio System',
-            toName: swapData.toName,
-            text: `Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            type: 'payment_released',
-            read: false
-          })
-        ]);
-
-        console.log('Payment release notifications sent');
-
-        alert(`Payment of $${swapData.paymentAmount} has been manually released for swap #${swapId.substring(0, 8)}.`);
-        
-        // Reload messages to show updated status
-        if (currentConversation) {
-          loadMessages(currentConversation);
-        }
-        
-      } catch (error) {
-        console.error('Error manually releasing payment:', error);
-        alert('Error releasing payment. Please try again.');
-      }
-    }
-
-    // Function to check and auto-release payments
-    async function checkPaymentAutoRelease() {
-      const currentTime = new Date();
-      
-      try {
-        const swapsSnapshot = await db.collection("swaps")
-          .where("paymentStatus", "==", "paid")
-          .where("status", "==", "completed")
-          .get();
-
-        for (const doc of swapsSnapshot.docs) {
-          const swapData = doc.data();
-          const autoReleaseTime = swapData.autoReleaseTime?.toDate();
-          
-          if (autoReleaseTime && currentTime > autoReleaseTime) {
-            // Auto-release payment after 48 hours
-            await db.collection("swaps").doc(doc.id).update({
-              paymentStatus: 'released',
-              autoReleasedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Send notification to both users
-            await Promise.all([
-              db.collection("messages").add({
-                from: 'system',
-                to: swapData.from,
-                fromName: 'Skillio System',
-                toName: swapData.fromName,
-                text: `Payment of $${swapData.paymentAmount} has been automatically released for swap #${doc.id.substring(0, 8)}.`,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                type: 'payment_released',
-                read: false
-              }),
-              db.collection("messages").add({
-                from: 'system',
-                to: swapData.to,
-                fromName: 'Skillio System',
-                toName: swapData.toName,
-                text: `Payment of $${swapData.paymentAmount} has been automatically released for swap #${doc.id.substring(0, 8)}.`,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                type: 'payment_released',
-                read: false
-              })
-            ]);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking payment auto-release:', error);
-      }
-    }
-
-    // Run payment auto-release check every hour
-    setInterval(checkPaymentAutoRelease, 60 * 60 * 1000);
-
-    // Modify the loadMessages function to handle swap messages
-    async function loadMessages(targetUserId) {
-      const messagesContainer = document.getElementById('messages');
-      
-      if (!messagesContainer) {
-        console.error('Messages container not found!');
-        return;
-      }
-      
-      // If no targetUserId provided, just show a message
-      if (!targetUserId) {
-        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Select a conversation to view messages</div>';
-        return;
-      }
-      
-      currentConversation = targetUserId;
-      messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
-
-      try {
-        const currentUser = firebase.auth().currentUser;
-        if (!currentUser) {
-          console.error('No current user found');
-          return;
-        }
-        
-        const currentUserId = currentUser.uid;
-        
-        // Additional safety check for targetUserId
-        if (!targetUserId || typeof targetUserId !== 'string') {
-          console.error('Invalid targetUserId:', targetUserId);
-          messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Invalid conversation selected</div>';
-          return;
-        }
-
-        // Get user names with better fallback logic
-        const [currentUserDoc, targetUserDoc] = await Promise.all([
-          db.collection("users").doc(currentUserId).get(),
-          db.collection("users").doc(targetUserId).get()
-        ]);
-        
-        const currentUserData = currentUserDoc.data();
-        const targetUserData = targetUserDoc.data();
-        
-        const currentUserName = currentUserData?.displayName || 
-                               currentUserData?.name || 
-                               currentUser.email || 
-                               'User ' + currentUserId.substring(0, 8);
-        
-        const targetUserName = targetUserData?.displayName || 
-                              targetUserData?.name || 
-                              'User ' + (targetUserId ? targetUserId.substring(0, 8) : 'Unknown');
-
-        // Get all messages and filter client-side (Firestore doesn't support complex queries well)
-        const messagesSnapshot = await db.collection("messages")
-          .orderBy("timestamp", "asc")
-          .get();
-
-        const messages = [];
-        for (const doc of messagesSnapshot.docs) {
-          const data = doc.data();
-          data.id = doc.id;
-          
-          // Filter for messages between these two users
-          if ((data.from === currentUserId && data.to === targetUserId) || 
-              (data.from === targetUserId && data.to === currentUserId)) {
-            
-            // For swap request messages, load the swap details
-            if (data.type === 'swap_request' && data.swapId) {
-              try {
-                const swapDoc = await db.collection("swaps").doc(data.swapId).get();
-                if (swapDoc.exists) {
-                  data.swapData = swapDoc.data();
-                  
-                  // Only show swap requests that are still pending payment or accepted
-                  const swapStatus = data.swapData.status;
-                  const paymentStatus = data.swapData.paymentStatus;
-                  
-                  // Skip if swap is cancelled or failed
-                  if (swapStatus === 'cancelled' || swapStatus === 'failed') {
-                    continue;
-                  }
-                  
-                  // Skip if payment failed
-                  if (paymentStatus === 'failed') {
-                    continue;
-                  }
-                }
-              } catch (error) {
-                console.error('Error loading swap data:', error);
-              }
-            }
-            
-            messages.push(data);
-          }
-        }
-
-        // Mark messages as read
-        await markMessagesAsRead(messages);
-
-        // Display messages
-        messagesContainer.innerHTML = '';
-        
-        messages.forEach((message, index) => {
-          
-          if (message.type === 'swap_request') {
-            messagesContainer.appendChild(displaySwapRequest(message));
-          } else if (message.type === 'swap_response') {
-            messagesContainer.appendChild(displaySwapResponse(message));
-          } else {
-            // Regular message display
-            const isFromCurrentUser = message.from === currentUserId;
-                    const profilePic = isFromCurrentUser ? 
-          (currentUserData?.profilePic || 'default_profile.jpg') :
-          (targetUserData?.profilePic || 'default_profile.jpg');
-            
-            // Get the message content from the correct field
-            const messageContent = message.text || message.message || 'No message content';
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            messageDiv.innerHTML = `
-              <div style="display: flex; align-items: start; margin-bottom: 10px;">
-                <img src="${profilePic}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: center; flex-shrink: 0; margin-right: 10px;">
-                <div style="flex: 1;">
-                  <div style="font-weight: bold; margin-bottom: 5px;">
-                    ${isFromCurrentUser ? currentUserName : targetUserName}
-                  </div>
-                  <div style="background: ${isFromCurrentUser ? '#007bff' : '#e9ecef'}; 
-                              color: ${isFromCurrentUser ? 'white' : 'black'}; 
-                              padding: 10px; border-radius: 8px; display: inline-block; max-width: 70%;">
-                    ${messageContent}
-                  </div>
-                  <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                    ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
-                  </div>
-                </div>
-              </div>
-            `;
-            messagesContainer.appendChild(messageDiv);
-          }
-        });
-
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // Add reply form
-        const form = document.createElement("form");
-        form.className = "reply-box";
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          const input = form.querySelector("input");
-          const text = input.value.trim();
-          if (!text) return;
-          
-          db.collection("messages").add({
-            from: currentUserId,
-            fromName: currentUserName,
-            to: targetUserId,
-            toName: targetUserName,
-            message: text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            read: false
-          }).then(() => {
-            input.value = "";
-            // Reload messages to show the new message
-            loadMessages(targetUserId);
-          });
-        };
-        form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
-        messagesContainer.appendChild(form);
-
-        // Add swap button
-        const swapButton = document.createElement("button");
-        swapButton.className = "swap-button";
-        swapButton.textContent = "Set Up Swap";
-        swapButton.onclick = () => openSwapModal(targetUserId, targetUserName);
-        messagesContainer.appendChild(swapButton);
-
-      } catch (error) {
-        console.error('Error loading messages:', error);
-        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error loading messages</div>';
-      }
-    }
+    async function completeSwap(swapId){ await db.collection('swaps').doc(swapId).update({ status:'completed', completedAt: firebase.firestore.FieldValue.serverTimestamp() }); alert('Great! Swap marked as completed.'); }
+    async function flagNoShow(swapId){ await db.collection('swaps').doc(swapId).update({ status:'incomplete', incompleteReason:'no_show', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); alert('Marked as didn’t happen.'); }
   </script>
 </body>
 </html>
