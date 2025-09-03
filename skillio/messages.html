@@ -148,14 +148,18 @@
       const listEl = qs('#conversationList');
       listEl.innerHTML = 'Loading conversations...';
       try{
-        // Find distinct partner IDs from messages where I am from OR to (limit by recent)
-        const recent = await db.collection('messages')
-          .where('participants', 'array-contains', currentUserId)
-          .orderBy('timestamp','desc').limit(100).get()
-          .catch(()=>null);
+        // Prefer a single query using participants array
+        let recent = null;
+        try{
+          recent = await db.collection('messages')
+            .where('participants', 'array-contains', currentUserId)
+            .orderBy('timestamp','desc')
+            .limit(100)
+            .get();
+        }catch(_e){ /* index may be missing; fallback below */ }
 
         const partners = new Map();
-        if(recent){
+        if(recent && !recent.empty){
           recent.forEach(doc=>{
             const m = doc.data();
             const other = (m.from === currentUserId) ? m.to : m.from;
@@ -163,17 +167,18 @@
             if(!partners.has(other)) partners.set(other, m.timestamp?.toDate()?.getTime() || 0);
           });
         } else {
-          // Fallback if composite index missing: get from/to separately (less efficient)
-          const sent = await db.collection('messages').where('from','==', currentUserId).get();
-          const received = await db.collection('messages').where('to','==', currentUserId).get();
-          sent.docs.forEach(d=> partners.set(d.data().to, Date.now()));
-          received.docs.forEach(d=> partners.set(d.data().from, Date.now()));
+          // Fallback: two queries
+          const [sent, received] = await Promise.all([
+            db.collection('messages').where('from','==', currentUserId).orderBy('timestamp','desc').limit(50).get(),
+            db.collection('messages').where('to','==', currentUserId).orderBy('timestamp','desc').limit(50).get()
+          ]);
+          sent.docs.forEach(d=> partners.set(d.data().to, d.data().timestamp?.toDate()?.getTime()||0));
+          received.docs.forEach(d=> partners.set(d.data().from, d.data().timestamp?.toDate()?.getTime()||0));
         }
 
         if(partners.size === 0){ listEl.innerHTML = '<p>No conversations yet.</p>'; return; }
         listEl.innerHTML = '';
 
-        // Render each partner card
         for(const [userId] of partners){
           let userName = 'User ' + userId.substring(0,8);
           let profilePic = 'default_profile.jpg';
@@ -213,7 +218,6 @@
 
       const convoId = makeConversationId(currentUserId, targetUserId);
 
-      // Unsubscribe previous listener
       if(unsubscribeMessages) unsubscribeMessages();
 
       unsubscribeMessages = db.collection('messages')
@@ -231,10 +235,10 @@
           renderConversation(messagesEl, msgs);
           markMessagesAsRead(msgs.filter(m=> m.to === currentUserId && !m.read));
 
-          // Show quick actions & composer
           renderQuickActions(quickEl); quickEl.style.display = 'flex';
           setupComposer(composerEl); composerEl.style.display = 'flex';
-          swapBtn.onclick = ()=> openSwapModal(targetUserId, targetUserData.displayName || targetUserData.name || ('User ' + targetUserId.substring(0,8)));
+          const theirName = targetUserData?.displayName || targetUserData?.name || ('User ' + targetUserId.substring(0,8));
+          swapBtn.onclick = ()=> openSwapModal(targetUserId, theirName);
           swapBtn.style.display = 'inline-block';
         }, err=>{
           console.error('onSnapshot', err); messagesEl.innerHTML = '<div style="color:red">Error loading messages</div>';
@@ -292,25 +296,25 @@
       card.setAttribute('data-swap-id', message.swapId);
 
       card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style=\"display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;\">
           <strong>Swap Request ${paid?`- $${price}`:''}</strong>
-          <span class="meta">${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : ''}</span>
+          <span class=\"meta\">${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : ''}</span>
         </div>
-        <div style="margin-bottom:8px; line-height:1.5">
+        <div style=\"margin-bottom:8px; line-height:1.5\">
           <div><strong>What:</strong> ${s.description || 'Session'}</div>
           <div><strong>When:</strong> ${start? start.toLocaleString(): '—'} (${minutes} min)</div>
           <div><strong>Mode:</strong> ${s.mode === 'in_person' ? `In person${s.location? ' · '+s.location:''}` : 'Online'}</div>
           <div><strong>Status:</strong> ${status}</div>
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">
           ${canRespond ? `
-            <button onclick="respondToSwap('${message.swapId}','accepted')" class="pill" style="background:#28a745;color:#fff">Accept</button>
-            <button onclick="respondToSwap('${message.swapId}','declined')" class="pill" style="background:#dc3545;color:#fff">Decline</button>
-            <button onclick="suggestAnotherTime('${message.swapId}','${s.from}','${s.fromName||''}')" class="pill">Suggest another time</button>
+            <button onclick=\"respondToSwap('${message.swapId}','accepted')\" class=\"pill\" style=\"background:#28a745;color:#fff\">Accept</button>
+            <button onclick=\"respondToSwap('${message.swapId}','declined')\" class=\"pill\" style=\"background:#dc3545;color:#fff\">Decline</button>
+            <button onclick=\"suggestAnotherTime('${message.swapId}','${s.from}','${s.fromName||''}')\" class=\"pill\">Suggest another time</button>
           `: ''}
           ${canComplete ? `
-            <button onclick="completeSwap('${message.swapId}')" class="pill" style="background:#28a745;color:#fff">Mark completed</button>
-            <button onclick="flagNoShow('${message.swapId}')" class="pill" style="background:#ff7043;color:#fff">Didn’t happen</button>
+            <button onclick=\"completeSwap('${message.swapId}')\" class=\"pill\" style=\"background:#28a745;color:#fff\">Mark completed</button>
+            <button onclick=\"flagNoShow('${message.swapId}')\" class=\"pill\" style=\"background:#ff7043;color:#fff\">Didn’t happen</button>
           `: ''}
         </div>
       `;
@@ -360,6 +364,7 @@
     }
 
     async function markMessagesAsRead(msgs){
+      if(!msgs.length) return;
       const batch = db.batch();
       msgs.forEach(m=>{ const ref = db.collection('messages').doc(m.id); batch.update(ref, { read:true }); });
       try{ await batch.commit(); }catch(e){ console.warn('mark read', e); }
