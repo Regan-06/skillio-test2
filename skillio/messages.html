@@ -571,6 +571,9 @@
             Create Swap with ${targetUserName}
           </div>
           <div class="modal-body">
+            <p class="swap-intro">
+              It's easy to start your first swap. We've pre-filled common details below – just adjust what's needed and hit <strong>Create Swap</strong>.
+            </p>
             <form id="swapForm">
               <div class="form-group">
                 <label for="swapDate">Date:</label>
@@ -586,11 +589,11 @@
               </div>
               <div class="form-group">
                 <label for="swapLocation">Location:</label>
-                <input type="text" id="swapLocation" placeholder="Where will this swap take place?">
+                <input type="text" id="swapLocation" placeholder="e.g., Online or local cafe">
               </div>
               <div class="form-group">
                 <label for="swapDescription">Description:</label>
-                <textarea id="swapDescription" placeholder="What skills will be exchanged?"></textarea>
+                <textarea id="swapDescription" placeholder="Briefly describe the swap"></textarea>
               </div>
               <div class="form-group">
                 <label for="paymentAmount">Payment Amount ($):</label>
@@ -621,18 +624,30 @@
       
       document.body.appendChild(modal);
       
+      // Show quick tutorial once for first-time visitors
+      if (!localStorage.getItem('swapTutorialShown')) {
+        alert('Welcome! Fill in the details below to create your first swap.');
+        localStorage.setItem('swapTutorialShown', 'true');
+      }
+
       // Set default date to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       selectedDate = tomorrow;
       document.getElementById('swapDate').value = tomorrow.toISOString().split('T')[0];
-      
+
       // Set default time to current time + 1 hour
       const now = new Date();
       now.setHours(now.getHours() + 1);
       document.getElementById('swapStartTime').value = now.toTimeString().slice(0, 5);
       now.setHours(now.getHours() + 1);
       document.getElementById('swapEndTime').value = now.toTimeString().slice(0, 5);
+
+      // Prefill other helpful defaults
+      document.getElementById('swapLocation').value = 'Online';
+      document.getElementById('swapDescription').value = 'Skill swap session';
+      document.getElementById('paymentAmount').value = '0.00';
+      document.getElementById('paymentMethod').value = 'stripe';
     }
 
     function closeSwapModal() {
@@ -749,6 +764,7 @@
         await db.collection("messages").add(messageData);
         console.log('Message created successfully');
 
+        alert('Swap request sent!');
         closeSwapModal();
         
         // Mock payment processing (replace with actual Stripe/PayPal integration)
