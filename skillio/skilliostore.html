@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-49YPEVEDNJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-49YPEVEDNJ');
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skillio Boost Store</title>
@@ -76,40 +67,100 @@
       max-width: 1000px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
     }
 
-    .deal-card {
+    .boost-card {
       background: white;
       border-radius: 20px;
       padding: 25px;
       box-shadow: 0 12px 30px rgba(0, 188, 212, 0.3);
       border: 2px solid #00bcd4;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
 
-    .deal-card:hover {
+    .boost-card:hover {
       transform: scale(1.05);
       box-shadow: 0 16px 40px rgba(0, 188, 212, 0.5);
     }
 
-    .deal-title {
+    .boost-card.featured {
+      border-color: #ffd700;
+      box-shadow: 0 12px 30px rgba(255, 215, 0, 0.4);
+    }
+
+    .boost-card.featured::before {
+      content: "🔥 POPULAR";
+      position: absolute;
+      top: 10px;
+      right: -30px;
+      background: #ffd700;
+      color: #333;
+      padding: 5px 40px;
+      font-size: 12px;
+      font-weight: bold;
+      transform: rotate(45deg);
+    }
+
+    .boost-title {
       font-size: 1.4rem;
       color: #007e8a;
       margin-bottom: 10px;
     }
 
-    .deal-time {
+    .boost-duration {
       font-size: 1.2rem;
       margin: 10px 0;
       color: #00bcd4;
+      font-weight: bold;
     }
 
-    .deal-price {
+    .boost-features {
+      text-align: left;
+      margin: 15px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .boost-features li {
+      padding: 5px 0;
+      color: #555;
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .boost-features li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #00bcd4;
+      font-weight: bold;
+    }
+
+    .boost-price {
+      font-size: 1.5rem;
+      margin: 20px 0;
+      color: #00bcd4;
+      font-weight: bold;
+    }
+
+    .boost-price .original {
+      text-decoration: line-through;
+      color: #999;
       font-size: 1.1rem;
-      margin-bottom: 20px;
-      color: #444;
+      margin-right: 10px;
+    }
+
+    .boost-price .discount {
+      background: #ff4444;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      margin-left: 10px;
     }
 
     button.buy-button {
@@ -122,12 +173,53 @@
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(0, 188, 212, 0.3);
       transition: all 0.3s ease;
+      width: 100%;
     }
 
     button.buy-button:hover {
       background: #0097a7;
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(0, 188, 212, 0.6);
+    }
+
+    .category-selector {
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 188, 212, 0.2);
+    }
+
+    .category-selector h3 {
+      color: #00bcd4;
+      margin-bottom: 15px;
+    }
+
+    .category-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .category-option {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .category-option:hover {
+      border-color: #00bcd4;
+      background: #f0f9ff;
+    }
+
+    .category-option.selected {
+      border-color: #00bcd4;
+      background: #00bcd4;
+      color: white;
     }
 
     @media (max-width: 600px) {
@@ -151,16 +243,16 @@
         margin-top: 20px;
       }
 
-      .deal-title {
+      .boost-title {
         font-size: 1.2rem;
       }
 
-      .deal-time {
+      .boost-duration {
         font-size: 1rem;
       }
 
-      .deal-price {
-        font-size: 1rem;
+      .boost-price {
+        font-size: 1.3rem;
       }
 
       .store-container {
@@ -185,49 +277,222 @@
   <h1>Skillio Boost Store</h1>
   <p class="subtext">Boost your profile to reach more users and get noticed for the skills, services, or workshops you're offering.</p>
 
-  <div class="store-container">
-    <div class="deal-card">
-      <div class="deal-title">Boost - 3 Days</div>
-      <div class="deal-time">Feature your profile sitewide for 72 hours</div>
-      <div class="deal-price">$4.99</div>
-      <button class="buy-button" onclick="addToCart('3-Day Boost', '3 Days Feature', 4.99)">Add to Cart</button>
+  <div class="category-selector">
+    <h3>Select Your Skill Category</h3>
+    <div class="category-options" id="categoryOptions">
+      <div class="category-option" data-category="Web Design">Web Design</div>
+      <div class="category-option" data-category="Cooking">Cooking</div>
+      <div class="category-option" data-category="Tutoring">Tutoring</div>
+      <div class="category-option" data-category="Fitness">Fitness</div>
+      <div class="category-option" data-category="Music">Music</div>
+      <div class="category-option" data-category="Handyman">Handyman</div>
+      <div class="category-option" data-category="Babysitting">Babysitting</div>
+      <div class="category-option" data-category="Social Media">Social Media</div>
+      <div class="category-option" data-category="Video Editing">Video Editing</div>
     </div>
-
-    <div class="deal-card">
-      <div class="deal-title">Boost - 1 Week</div>
-      <div class="deal-time">Top placement in searches and suggestions</div>
-      <div class="deal-price">$9.99</div>
-      <button class="buy-button" onclick="addToCart('1-Week Boost', '7 Days Feature', 9.99)">Add to Cart</button>
-    </div>
-
-    <div class="deal-card">
-      <div class="deal-title">Boost - 1 Month</div>
-      <div class="deal-time">Stay visible across Skillio for a full month</div>
-      <div class="deal-price">$19.99</div>
-      <button class="buy-button" onclick="addToCart('1-Month Boost', '30 Days Feature', 19.99)">Add to Cart</button>
-    </div>
+    <p><em>Choose your category to see boost options</em></p>
   </div>
 
+  <div class="store-container" id="boost-packages"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script>
-    function addToCart(title, time, price) {
-      let cart = JSON.parse(localStorage.getItem('skillioCart')) || [];
-      cart.push({ title, time, price });
-      localStorage.setItem('skillioCart', JSON.stringify(cart));
-      alert(`${title} added to your cart!`);
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTnKPEvdxkJnn2041wT-2io3jU6D-vQrw",
+      authDomain: "skillio-b2f44.firebaseapp.com",
+      projectId: "skillio-b2f44",
+      storageBucket: "skillio-b2f44.appspot.com",
+      messagingSenderId: "883002535621",
+      appId: "1:883002535621:web:f3efb6d41389fbd91c8aac"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let selectedCategory = null;
+    let currentUser = null;
+
+    // Check authentication
+    firebase.auth().onAuthStateChanged(function(user) {
+      currentUser = user;
+      if (!user) {
+        alert('Please sign in to purchase boosts');
+        window.location.href = 'auth.html';
+      }
+    });
+
+    // Boost packages data
+    const boostPackages = [
+      {
+        id: 'basic_7',
+        title: 'Basic Boost',
+        duration: '7 Days',
+        durationDays: 7,
+        price: 499, // $4.99
+        originalPrice: 799,
+        features: [
+          'Top placement in search results',
+          'Profile highlighted with boost badge',
+          'Increased visibility for 7 days'
+        ],
+        featured: false
+      },
+      {
+        id: 'premium_30',
+        title: 'Premium Boost',
+        duration: '30 Days',
+        durationDays: 30,
+        price: 1499, // $14.99
+        originalPrice: 2499,
+        features: [
+          'Top placement in search results',
+          'Profile highlighted with boost badge',
+          'Increased visibility for 30 days',
+          'Priority customer support'
+        ],
+        featured: true
+      },
+      {
+        id: 'ultimate_90',
+        title: 'Ultimate Boost',
+        duration: '90 Days',
+        durationDays: 90,
+        price: 3499, // $29.99
+        originalPrice: 5999,
+        features: [
+          'Top placement in search results',
+          'Profile highlighted with boost badge',
+          'Increased visibility for 90 days',
+          'Priority customer support',
+          'Featured profile section',
+          'Analytics dashboard access'
+        ],
+        featured: false
+      }
+    ];
+
+    // Category selection
+    document.getElementById('categoryOptions').addEventListener('click', function(e) {
+      if (e.target.classList.contains('category-option')) {
+        // Remove previous selection
+        document.querySelectorAll('.category-option').forEach(opt => opt.classList.remove('selected'));
+        // Add selection to clicked option
+        e.target.classList.add('selected');
+        selectedCategory = e.target.dataset.category;
+        displayBoostPackages();
+      }
+    });
+
+    function displayBoostPackages() {
+      if (!selectedCategory) {
+        document.getElementById('boost-packages').innerHTML = '<p>Please select a skill category first</p>';
+        return;
+      }
+
+      const packagesDiv = document.getElementById('boost-packages');
+      packagesDiv.innerHTML = '';
+
+      boostPackages.forEach(package => {
+        const packageDiv = document.createElement('div');
+        packageDiv.className = `boost-card ${package.featured ? 'featured' : ''}`;
+        
+        const discount = Math.round(((package.originalPrice - package.price) / package.originalPrice) * 100);
+        
+        packageDiv.innerHTML = `
+          <h3 class="boost-title">${package.title}</h3>
+          <div class="boost-duration">${package.duration}</div>
+          <ul class="boost-features">
+            ${package.features.map(feature => `<li>${feature}</li>`).join('')}
+          </ul>
+          <div class="boost-price">
+            <span class="original">$${(package.originalPrice / 100).toFixed(2)}</span>
+            $${(package.price / 100).toFixed(2)}
+            <span class="discount">-${discount}%</span>
+          </div>
+          <button class="buy-button" onclick="purchaseBoost('${package.id}', '${package.durationDays}', ${package.price})">
+            Buy Now - $${(package.price / 100).toFixed(2)}
+          </button>
+        `;
+        packagesDiv.appendChild(packageDiv);
+      });
+    }
+
+    async function purchaseBoost(packageId, durationDays, price) {
+      if (!currentUser) {
+        alert('Please sign in to purchase boosts');
+        return;
+      }
+
+      if (!selectedCategory) {
+        alert('Please select a skill category first');
+        return;
+      }
+
+      try {
+        // Check if user already has an active boost for this category
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        const userData = userDoc.data();
+        
+        if (userData.boosts && userData.boosts[selectedCategory]) {
+          const existingBoost = userData.boosts[selectedCategory];
+          if (existingBoost.expiresAt && existingBoost.expiresAt.toDate() > new Date()) {
+            const daysLeft = Math.ceil((existingBoost.expiresAt.toDate() - new Date()) / (1000 * 60 * 60 * 24));
+            if (!confirm(`You already have an active boost for ${selectedCategory} with ${daysLeft} days remaining. Would you like to extend it?`)) {
+              return;
+            }
+          }
+        }
+
+        // Create boost purchase record
+        const boostData = {
+          userId: currentUser.uid,
+          userName: userData.name || userData.displayName || currentUser.email,
+          category: selectedCategory,
+          packageId: packageId,
+          durationDays: parseInt(durationDays),
+          price: price,
+          purchasedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          expiresAt: firebase.firestore.Timestamp.fromDate(
+            new Date(Date.now() + parseInt(durationDays) * 24 * 60 * 60 * 1000)
+          ),
+          status: 'active'
+        };
+
+        // Add to boosts collection
+        const boostRef = await db.collection('boosts').add(boostData);
+
+        // Update user's boost status
+        const userBoostData = {
+          [`boosts.${selectedCategory}`]: {
+            boostId: boostRef.id,
+            category: selectedCategory,
+            expiresAt: boostData.expiresAt,
+            status: 'active'
+          }
+        };
+
+        await db.collection('users').doc(currentUser.uid).update(userBoostData);
+
+        // Show success message
+        alert(`🎉 Boost activated for ${selectedCategory}! You'll now appear at the top of search results for the next ${durationDays} days.`);
+        
+        // Refresh display
+        displayBoostPackages();
+
+      } catch (error) {
+        console.error('Error purchasing boost:', error);
+        alert('Error purchasing boost. Please try again.');
+      }
     }
 
     function viewCart() {
-      const cart = JSON.parse(localStorage.getItem('skillioCart')) || [];
-      if (cart.length === 0) {
-        alert("Your cart is empty.");
-      } else {
-        let message = "Your Cart:\n";
-        cart.forEach((item, i) => {
-          message += `${i + 1}. ${item.title} - ${item.time} - $${item.price.toFixed(2)}\n`;
-        });
-        alert(message);
-      }
+      // For now, just show a message - you can implement a cart system later
+      alert('Cart functionality coming soon! For now, boosts are purchased directly.');
     }
+
+    // Initialize display
+    displayBoostPackages();
   </script>
 </body>
 </html>
