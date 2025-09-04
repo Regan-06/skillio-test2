@@ -50,21 +50,6 @@
     .reply-box button { padding: 8px 16px; background-color: #00bcd4; border: none; color: white; border-radius: 8px;
                         cursor: pointer; font-size: 1rem; }
     .reply-box button:hover { background-color: #0097a7; }
-
-    .swap-status-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 12px;
-      color: #fff;
-      margin-left: 8px;
-    }
-    .status-accepted { background-color: #28a745; }
-    .status-declined { background-color: #dc3545; }
-    .status-pending_payment,
-    .status-pending { background-color: #ffc107; color: #212529; }
-    .status-cancelled { background-color: #6c757d; }
-
     .swap-button {
       background-color: #00bcd4;
       color: white;
@@ -111,17 +96,93 @@
       padding: 20px;
       border-radius: 12px 12px 0 0;
       text-align: center;
-      font-size: 18px;
-      font-weight: bold;
       position: sticky;
       top: 0;
       z-index: 10;
+    }
+
+    .swap-progress {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding: 0 10px;
+    }
+
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      opacity: 0.6;
+    }
+
+    .progress-step.active {
+      opacity: 1;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .progress-step.active .step-number {
+      background: white;
+      color: #00bcd4;
+    }
+
+    .step-text {
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: bold;
     }
 
     .modal-body {
       padding: 20px;
       max-height: 60vh;
       overflow-y: auto;
+    }
+
+    .swap-intro {
+      background: #e3f2fd;
+      border: 1px solid #2196f3;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      color: #1565c0;
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .swap-intro strong {
+      color: #0d47a1;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      font-weight: normal;
+      font-style: italic;
+    }
+
+    .char-counter {
+      text-align: right;
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
     }
 
     .form-group {
@@ -355,18 +416,18 @@
       } else {
         // Show all conversations
         try {
-          const sent = await db.collection("messages").where("from", "==", currentUserId).get();
-          const received = await db.collection("messages").where("to", "==", currentUserId).get();
-          const userIds = new Set();
-          sent.docs.forEach(doc => userIds.add(doc.data().to));
-          received.docs.forEach(doc => userIds.add(doc.data().from));
+      const sent = await db.collection("messages").where("from", "==", currentUserId).get();
+      const received = await db.collection("messages").where("to", "==", currentUserId).get();
+      const userIds = new Set();
+      sent.docs.forEach(doc => userIds.add(doc.data().to));
+      received.docs.forEach(doc => userIds.add(doc.data().from));
           
-          if (userIds.size === 0) {
-            conversationList.innerHTML = "<p>No conversations yet.</p>";
-            return;
-          }
+      if (userIds.size === 0) {
+        conversationList.innerHTML = "<p>No conversations yet.</p>";
+        return;
+      }
           
-          conversationList.innerHTML = "";
+      conversationList.innerHTML = "";
           
           // Process each conversation
           for (const userId of userIds) {
@@ -376,20 +437,20 @@
             try {
               const userDoc = await db.collection('users').doc(userId).get();
               if (userDoc.exists) {
-                const userData = userDoc.data();
+        const userData = userDoc.data();
                 userName = userData.displayName || userData.name || 'User ' + userId.substring(0, 8);
                 profilePic = userData.profilePic || '';
               }
             } catch (e) {
               console.error('Error fetching user data for conversation list:', e);
             }
-            
-            const convo = document.createElement("div");
-            convo.className = "conversation";
+
+        const convo = document.createElement("div");
+        convo.className = "conversation";
             convo.innerHTML = `<img src="${profilePic || 'default_profile.jpg'}" class="profile-pic"><div><strong>${userName}</strong><br><small>Click to expand chat</small></div>`;
             
-            const msgDiv = document.createElement("div");
-            msgDiv.className = "messages";
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "messages";
             msgDiv.style.display = "none";
             msgDiv.id = 'messages-' + userId; // Unique ID for each conversation
             
@@ -401,7 +462,7 @@
               
               // Show this conversation's messages
               msgDiv.style.display = "block";
-              msgDiv.innerHTML = "<p>Loading chat...</p>";
+            msgDiv.innerHTML = "<p>Loading chat...</p>";
               
               // Clear and set up for new system
               msgDiv.innerHTML = '';
@@ -583,7 +644,21 @@
       modal.innerHTML = `
         <div class="modal-content">
           <div class="modal-header">
-            Create Swap with ${targetUserName}
+            <div class="swap-progress">
+              <div class="progress-step active">
+                <span class="step-number">1</span>
+                <span class="step-text">Fill Details</span>
+              </div>
+              <div class="progress-step">
+                <span class="step-number">2</span>
+                <span class="step-text">Review & Pay</span>
+              </div>
+              <div class="progress-step">
+                <span class="step-number">3</span>
+                <span class="step-text">Wait for Approval</span>
+              </div>
+            </div>
+            <div class="modal-title">Create Swap with ${targetUserName}</div>
           </div>
           <div class="modal-body">
             <p class="swap-intro">
@@ -591,27 +666,30 @@
             </p>
             <form id="swapForm">
               <div class="form-group">
-                <label for="swapDate">Date:</label>
+                <label for="swapDate">Date: <span class="help-text">(Tomorrow is pre-selected)</span></label>
                 <input type="date" id="swapDate" required>
               </div>
               <div class="form-group">
-                <label for="swapStartTime">Start Time:</label>
+                <label for="swapStartTime">Start Time: <span class="help-text">(1 hour from now)</span></label>
                 <input type="time" id="swapStartTime" required>
               </div>
               <div class="form-group">
-                <label for="swapEndTime">End Time:</label>
+                <label for="swapEndTime">End Time: <span class="help-text">(2 hours from now)</span></label>
                 <input type="time" id="swapEndTime" required>
               </div>
               <div class="form-group">
-                <label for="swapLocation">Location:</label>
+                <label for="swapLocation">Location: <span class="help-text">(Optional)</span></label>
                 <input type="text" id="swapLocation" placeholder="e.g., Online or local cafe">
               </div>
               <div class="form-group">
-                <label for="swapDescription">Description:</label>
-                <textarea id="swapDescription" placeholder="Briefly describe the swap"></textarea>
+                <label for="swapDescription">Description: <span class="help-text">(Optional)</span></label>
+                <textarea id="swapDescription" placeholder="Briefly describe the swap" maxlength="200"></textarea>
+                <div class="char-counter">
+                  <span id="charCount">0</span>/200 characters
+                </div>
               </div>
               <div class="form-group">
-                <label for="paymentAmount">Payment Amount ($):</label>
+                <label for="paymentAmount">Payment Amount ($): <span class="help-text">(Set to $0.00 for free swaps)</span></label>
                 <input type="number" id="paymentAmount" min="0" step="0.01" placeholder="0.00" required>
               </div>
               <div class="form-group">
@@ -663,6 +741,17 @@
       document.getElementById('swapDescription').value = 'Skill swap session';
       document.getElementById('paymentAmount').value = '0.00';
       document.getElementById('paymentMethod').value = 'stripe';
+
+      // Set up character counter for description
+      const descriptionTextarea = document.getElementById('swapDescription');
+      const charCount = document.getElementById('charCount');
+      
+      if (descriptionTextarea && charCount) {
+        charCount.textContent = descriptionTextarea.value.length;
+        descriptionTextarea.addEventListener('input', function() {
+          charCount.textContent = this.value.length;
+        });
+      }
     }
 
     function closeSwapModal() {
@@ -1030,7 +1119,6 @@
       messageDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
           <strong>Swap Request - $${paymentAmount}</strong>
-          <span class="swap-status-badge" data-status-badge>${swapStatus}</span>
           <span style="float: right; color: #666; font-size: 12px;">
             ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'Just now'}
           </span>
@@ -1044,50 +1132,37 @@
         </div>
         <div style="margin-bottom: 10px; font-size: 12px; color: #666;">
           <strong>Payment Status:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span><br>
-          <strong>Swap Status:</strong> <span data-swap-status-text>${swapStatus}</span><br>
+          <strong>Swap Status:</strong> ${swapStatus}<br>
           <strong>Auto-release:</strong> ${swapData?.autoReleaseTime ? new Date(swapData.autoReleaseTime.toDate()).toLocaleString() : 'Not set'}
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           ${paymentStatus === 'paid' ? `
-            <button onclick="respondToSwap('${message.swapId}', 'accepted')"
+            <button onclick="respondToSwap('${message.swapId}', 'accepted')" 
                     style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
               Accept
             </button>
-            <button onclick="respondToSwap('${message.swapId}', 'declined')"
+            <button onclick="respondToSwap('${message.swapId}', 'declined')" 
                     style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
               Decline
             </button>
           ` : `
-            <button onclick="simulatePaymentSuccess('${message.swapId}', ${paymentAmount}, '${swapData?.to || ''}', '${swapData?.toName || ''}')"
+            <button onclick="simulatePaymentSuccess('${message.swapId}', ${paymentAmount}, '${swapData?.to || ''}', '${swapData?.toName || ''}')" 
                     style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
               Simulate Payment
             </button>
           `}
-          <button onclick="openDisputeForm('${message.swapId}', ${JSON.stringify(swapData)})"
+          <button onclick="openDisputeForm('${message.swapId}', ${JSON.stringify(swapData)})" 
                   style="background: #ffc107; color: #212529; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
             Dispute
           </button>
           ${paymentStatus === 'paid' ? `
-            <button onclick="simulatePaymentRelease('${message.swapId}')"
+            <button onclick="simulatePaymentRelease('${message.swapId}')" 
                     style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
               Release Payment
             </button>
           ` : ''}
         </div>
       `;
-
-      const statusBadge = messageDiv.querySelector('[data-status-badge]');
-      const statusTextElement = messageDiv.querySelector('[data-swap-status-text]');
-      function updateStatus(status) {
-        statusBadge.textContent = status;
-        statusBadge.className = 'swap-status-badge status-' + status;
-        if (statusTextElement) statusTextElement.textContent = status;
-      }
-      updateStatus(swapStatus);
-      db.collection('swaps').doc(message.swapId).onSnapshot(doc => {
-        const newStatus = doc.data()?.status || 'pending_payment';
-        updateStatus(newStatus);
-      });
 
       return messageDiv;
     }
@@ -1487,35 +1562,35 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         // Add reply form
-        const form = document.createElement("form");
-        form.className = "reply-box";
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          const input = form.querySelector("input");
-          const text = input.value.trim();
-          if (!text) return;
+            const form = document.createElement("form");
+            form.className = "reply-box";
+            form.onsubmit = (e) => {
+              e.preventDefault();
+              const input = form.querySelector("input");
+              const text = input.value.trim();
+              if (!text) return;
           
-          db.collection("messages").add({
-            from: currentUserId,
-            fromName: currentUserName,
+              db.collection("messages").add({
+                from: currentUserId,
+                fromName: currentUserName,
             to: targetUserId,
             toName: targetUserName,
-            message: text,
+                message: text,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             read: false
-          }).then(() => {
-            input.value = "";
+              }).then(() => {
+                input.value = "";
             // Reload messages to show the new message
             loadMessages(targetUserId);
-          });
-        };
-        form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
+              });
+            };
+            form.innerHTML = `<input type="text" placeholder="Type your message..." required /><button type="submit">Send</button>`;
         messagesContainer.appendChild(form);
 
         // Add swap button
-        const swapButton = document.createElement("button");
-        swapButton.className = "swap-button";
-        swapButton.textContent = "Set Up Swap";
+            const swapButton = document.createElement("button");
+            swapButton.className = "swap-button";
+            swapButton.textContent = "Set Up Swap";
         swapButton.onclick = () => openSwapModal(targetUserId, targetUserName);
         messagesContainer.appendChild(swapButton);
 
