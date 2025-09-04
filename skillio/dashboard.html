@@ -173,6 +173,15 @@
       <li>Loading...</li>
     </ul>
   </div>
+  <div class="card">
+    <h2>🚀 Boost Status</h2>
+    <div id="boostStatus">Loading...</div>
+    <a href="skilliostore.html" style="text-decoration: none;">
+      <button style="background: linear-gradient(45deg, #ff6b35, #f7931e); color: white; border: none; padding: 8px 16px; border-radius: 8px; margin-top: 10px; cursor: pointer;">
+        Get Boosted!
+      </button>
+    </a>
+  </div>
 </div>
 
 <!-- Firebase + Dashboard Logic -->
@@ -438,7 +447,65 @@
       bookmarkedUsers.innerHTML = '<li>Error loading bookmarked users.</li>';
     }
 
+    // 5. Load boost status
+    await loadBoostStatus(userId);
+
     console.log('Dashboard data loaded successfully');
+  }
+
+  // Function to load and display boost status
+  async function loadBoostStatus(userId) {
+    try {
+      const boostStatusDiv = document.getElementById('boostStatus');
+      if (!boostStatusDiv) return;
+
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (!userData.boosts || Object.keys(userData.boosts).length === 0) {
+        boostStatusDiv.innerHTML = '<p style="color: #666;">No active boosts</p>';
+        return;
+      }
+
+      let boostHtml = '';
+      let activeBoosts = 0;
+      
+      Object.keys(userData.boosts).forEach(category => {
+        const boost = userData.boosts[category];
+        if (boost.status === 'active' && boost.expiresAt) {
+          const expiresAt = boost.expiresAt.toDate();
+          const now = new Date();
+          const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+          
+          if (daysLeft > 0) {
+            activeBoosts++;
+            boostHtml += `
+              <div style="background: linear-gradient(45deg, #ff6b35, #f7931e); color: white; padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <strong>${category}</strong><br>
+                    <small>🚀 Boosted</small>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 16px; font-weight: bold;">${daysLeft}</div>
+                    <small>days left</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        }
+      });
+
+      if (activeBoosts > 0) {
+        boostStatusDiv.innerHTML = boostHtml;
+      } else {
+        boostStatusDiv.innerHTML = '<p style="color: #666;">No active boosts</p>';
+      }
+    } catch (error) {
+      console.error('Error loading boost status:', error);
+      document.getElementById('boostStatus').innerHTML = '<p style="color: #ff4444;">Error loading boost status</p>';
+    }
   }
 
   // Call setupRealTimeListeners after user authentication
