@@ -309,6 +309,89 @@
           input.style.display = (baseField === "Other") ? "block" : "none";
         }
       });
+
+      // Add boost status section
+      if (currentUserId === viewedUserId) {
+        addBoostStatusSection(container, data);
+      }
+    }
+
+    function addBoostStatusSection(container, data) {
+      const boostSection = document.createElement("div");
+      boostSection.className = "boost-status-section";
+      boostSection.innerHTML = `
+        <h3 style="color: #00bcd4; margin-top: 30px; border-top: 2px solid #e0e0e0; padding-top: 20px;">
+          🚀 Boost Status
+        </h3>
+        <div id="boostStatusContent">
+          <p>Loading boost information...</p>
+        </div>
+        <a href="skilliostore.html" style="text-decoration: none;">
+          <button type="button" style="background: linear-gradient(45deg, #ff6b35, #f7931e); margin-top: 15px;">
+            Get Boosted! 🚀
+          </button>
+        </a>
+      `;
+      container.appendChild(boostSection);
+      
+      // Load and display boost status
+      loadBoostStatus(data);
+    }
+
+    async function loadBoostStatus(data) {
+      try {
+        const boostStatusContent = document.getElementById('boostStatusContent');
+        if (!boostStatusContent) return;
+
+        if (!data.boosts || Object.keys(data.boosts).length === 0) {
+          boostStatusContent.innerHTML = `
+            <p style="color: #666; font-style: italic;">No active boosts</p>
+            <p style="font-size: 14px; color: #888;">Boost your profile to appear at the top of search results!</p>
+          `;
+          return;
+        }
+
+        let boostHtml = '';
+        Object.keys(data.boosts).forEach(category => {
+          const boost = data.boosts[category];
+          if (boost.status === 'active' && boost.expiresAt) {
+            const expiresAt = boost.expiresAt.toDate();
+            const now = new Date();
+            const daysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+            
+            if (daysLeft > 0) {
+              boostHtml += `
+                <div class="boost-item" style="background: linear-gradient(45deg, #ff6b35, #f7931e); color: white; padding: 15px; border-radius: 10px; margin: 10px 0; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <strong>${category}</strong><br>
+                      <small>🚀 Boosted Profile</small>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="font-size: 18px; font-weight: bold;">${daysLeft}</div>
+                      <small>days left</small>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+        });
+
+        if (boostHtml) {
+          boostStatusContent.innerHTML = boostHtml;
+        } else {
+          boostStatusContent.innerHTML = `
+            <p style="color: #666; font-style: italic;">No active boosts</p>
+            <p style="font-size: 14px; color: #888;">Boost your profile to appear at the top of search results!</p>
+          `;
+        }
+      } catch (error) {
+        console.error('Error loading boost status:', error);
+        document.getElementById('boostStatusContent').innerHTML = `
+          <p style="color: #ff4444;">Error loading boost status</p>
+        `;
+      }
     }
 
     document.getElementById("editButton").addEventListener("click", () => {
