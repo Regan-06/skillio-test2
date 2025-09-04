@@ -151,6 +151,25 @@
       margin-top: 6px;
     }
 
+    .boost-badge {
+      display: inline-block;
+      background: linear-gradient(45deg, #ff6b35, #f7931e);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+      animation: boostPulse 2s infinite;
+    }
+
+    @keyframes boostPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
     #categories {
       display: flex;
       flex-wrap: wrap;
@@ -359,15 +378,39 @@
       })
       .catch(error => { console.error("Auth persistence error:", error); });
 
-    function searchSkills(category = null) {
+    async function searchSkills(category = null) {
       const input = category ? category.toLowerCase() : document.getElementById('searchBar').value.toLowerCase();
       const resultsDiv = document.getElementById('results');
       resultsDiv.innerHTML = 'Searching...';
 
-      db.collection("users").get().then(snapshot => {
-        const results = snapshot.docs.filter(doc => {
+      try {
+        const snapshot = await db.collection("users").get();
+        let results = snapshot.docs.filter(doc => {
           const data = doc.data();
           return data.skillOffered && data.skillOffered.toLowerCase().includes(input);
+        });
+
+        // Sort results by boost status and expiration
+        results = results.sort((a, b) => {
+          const aData = a.data();
+          const bData = b.data();
+          
+          // Check if users have active boosts for this category
+          const aBoost = aData.boosts && aData.boosts[input] && aData.boosts[input].status === 'active';
+          const bBoost = bData.boosts && bData.boosts[input] && bData.boosts[input].status === 'active';
+          
+          if (aBoost && !bBoost) return -1; // a has boost, b doesn't
+          if (!aBoost && bBoost) return 1;  // b has boost, a doesn't
+          
+          if (aBoost && bBoost) {
+            // Both have boosts, sort by expiration (longer remaining time first)
+            const aExpires = aData.boosts[input].expiresAt.toDate();
+            const bExpires = bData.boosts[input].expiresAt.toDate();
+            return bExpires - aExpires; // Later expiration first
+          }
+          
+          // No boosts, maintain original order
+          return 0;
         });
 
         resultsDiv.innerHTML = results.length > 0 ? '' : "<p>No matching users found.</p>";
@@ -377,13 +420,23 @@
           const div = document.createElement('div');
           div.className = 'result-item';
 
+          // Check if user has active boost for this category
+          const hasBoost = data.boosts && data.boosts[input] && data.boosts[input].status === 'active';
+          const boostExpires = hasBoost ? data.boosts[input].expiresAt.toDate() : null;
+          const daysLeft = hasBoost ? Math.ceil((boostExpires - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+
           let status = "Open to Swaps & Paid";
           if (data.swapOnly) status = "Swap Only";
           else if (data.paidSession) status = "Available for Paid Sessions";
 
+          // Add boost indicator if active
+          const boostBadge = hasBoost ? 
+            `<div class="boost-badge" title="Boosted profile - ${daysLeft} days remaining">🚀 BOOSTED</div>` : '';
+
           div.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div>
+                ${boostBadge}
                 <a href="profile.html?user=${doc.id}">${data.name}</a> - ${data.skillOffered}<br>
                 <small>${data.description || ''}</small><br>
                 <span>${status}</span><br><br>
@@ -397,10 +450,10 @@
           `;
           resultsDiv.appendChild(div);
         });
-      }).catch(error => {
+      } catch (error) {
         console.error("Error fetching users:", error);
         resultsDiv.innerHTML = "<p>Error loading results. Try again.</p>";
-      });
+      }
     }
 
     function sendMessage(event, toUserId, toUserName) {
@@ -502,6 +555,61 @@
       firebase.auth().signOut().then(() => {
         window.location.href = "auth.html";
       });
+    }
+
+    // Function to clean up expired boosts
+    async function cleanupExpiredBoosts() {
+      try {
+        const now = new Date();
+        const usersSnapshot = await db.collection('users').get();
+        
+        const cleanupPromises = [];
+        
+        usersSnapshot.forEach(doc => {
+          const userData = doc.data();
+          if (userData.boosts) {
+            Object.keys(userData.boosts).forEach(category => {
+              const boost = userData.boosts[category];
+              if (boost.expiresAt && boost.expiresAt.toDate() < now) {
+                // Boost has expired, remove it
+                cleanupPromises.push(
+                  db.collection('users').doc(doc.id).update({
+                    [`boosts.${category}`]: firebase.firestore.FieldValue.delete()
+                  })
+                );
+                
+                // Also update the boosts collection
+                if (boost.boostId) {
+                  cleanupPromises.push(
+                    db.collection('boosts').doc(boost.boostId).update({
+                      status: 'expired'
+                    })
+                  );
+                }
+              }
+            });
+          }
+        });
+        
+        if (cleanupPromises.length > 0) {
+          await Promise.all(cleanupPromises);
+          console.log(`Cleaned up ${cleanupPromises.length} expired boosts`);
+        }
+      } catch (error) {
+        console.error('Error cleaning up expired boosts:', error);
+      }
+    }
+
+    // Run boost cleanup when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      cleanupExpiredBoosts();
+    });
+
+    // Add boost info to user profiles
+    function showBoostInfo(userId) {
+      // This function can be used to show detailed boost information
+      // when users click on boosted profiles
+      console.log('Showing boost info for user:', userId);
     }
   </script>
 </body>
